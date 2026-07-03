@@ -1,48 +1,50 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
+import { Button } from './Button';
 
-type TextInputFieldProps = {
-  label: string;
+type InlineAddRowProps = {
+  visible: boolean;
   value: string;
   onChangeText: (value: string) => void;
-  keyboardType?: 'default' | 'numeric';
-  placeholder?: string;
+  onSubmit: () => void;
+  placeholder: string;
 };
 
-// Reusable labeled input field for forms.
-export function TextInputField({
-  label,
+// Inline "type a name + Add" row used for adding categories / sub-categories.
+export function InlineAddRow({
+  visible,
   value,
   onChangeText,
-  keyboardType = 'default',
+  onSubmit,
   placeholder,
-}: TextInputFieldProps) {
+}: InlineAddRowProps) {
+  if (!visible) return null;
+
   return (
-    <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={styles.row}>
       <TextInput
-        keyboardType={keyboardType}
+        autoFocus
+        value={value}
         onChangeText={onChangeText}
+        onSubmitEditing={onSubmit}
         placeholder={placeholder}
         placeholderTextColor={colors.muted}
         style={styles.input}
-        value={value}
       />
+      <Button label="Add" onPress={onSubmit} style={styles.button} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
+  row: {
+    flexDirection: 'row',
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  label: {
-    color: colors.subText,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
   input: {
+    flex: 1,
     backgroundColor: colors.bgElevated,
     borderColor: colors.border,
     borderRadius: radius.md,
@@ -51,5 +53,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+  },
+  button: {
+    justifyContent: 'center',
   },
 });
