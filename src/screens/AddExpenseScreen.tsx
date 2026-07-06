@@ -12,7 +12,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { PaymentMethod } from '../types';
 import { defaultDateForMonth, getMonthLabel, isCurrentMonth, dayKeyToIso } from '../utils/date';
-import { formatCurrency } from '../utils/format';
+import { formatAmountInput, formatCurrency, parseAmountInput, stripAmountInput } from '../utils/format';
 
 type AddExpenseScreenProps = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
 
@@ -74,9 +74,14 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
     setAddingSub(false);
   }
 
+  function handleAmountChange(text: string) {
+    const digits = stripAmountInput(text);
+    setAmount(digits ? formatAmountInput(digits) : '');
+  }
+
   // Validates and saves the transaction, then returns to the dashboard.
   function handleSave() {
-    const parsedAmount = Number(amount);
+    const parsedAmount = parseAmountInput(amount);
     if (!parsedAmount || parsedAmount <= 0) {
       Alert.alert('Invalid amount', 'Please enter a valid amount greater than 0.');
       return;
@@ -147,8 +152,8 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         <TextInputField
           keyboardType="numeric"
           label="Amount (IDR)"
-          onChangeText={setAmount}
-          placeholder="e.g. 25000"
+          onChangeText={handleAmountChange}
+          placeholder="e.g. 25.000"
           value={amount}
         />
 
