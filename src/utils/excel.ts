@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as XLSX from 'xlsx';
 import { Expense } from '../types';
+import { paymentStats } from './analytics';
 import { getMonthLabel } from './date';
 
 // Lazily-imported native modules so web builds don't choke on them.
@@ -38,26 +39,8 @@ export async function exportExpensesToExcel(
   }));
 
   // Only real spending counts toward totals; withdrawals are transfers.
-  const onlyExpenses = expenses.filter((item) => item.type === 'expense');
-  const totalSpent = onlyExpenses.reduce((sum, item) => sum + item.amount, 0);
-
-  let cashSpent = 0;
-  let debitSpent = 0;
-  let withdrawn = 0;
-  const byCategory: Record<string, number> = {};
-  const byMonth: Record<string, number> = {};
-  for (const item of expenses) {
-    if (item.type === 'withdrawal') {
-      withdrawn += item.amount;
-      continue;
-    }
-    if (item.method === 'cash') cashSpent += item.amount;
-    else debitSpent += item.amount;
-    byCategory[item.category] = (byCategory[item.category] ?? 0) + item.amount;
-    const key = item.date.slice(0, 7);
-    byMonth[key] = (byMonth[key] ?? 0) + item.amount;
-  }
-  const cashOnHand = withdrawn - cashSpent;
+  const stats = paymentStats(expenses);
+  const { totalSpent, cashSpent, debitSpent, withdrawn, cashOnHand, byCategory, byMonth } = stats;
 
   const summaryRows: (string | number)[][] = [
     ['Expense Report (IDR)'],

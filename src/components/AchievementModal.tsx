@@ -8,6 +8,7 @@ type AchievementModalProps = {
   onClose: () => void;
 };
 
+// TECHDEBT: Wire this modal on the dashboard when achievement unlock detection is added.
 // Celebratory popup shown when the user unlocks new achievements.
 export function AchievementModal({ achievements, onClose }: AchievementModalProps) {
   const scale = useRef(new Animated.Value(0.6)).current;

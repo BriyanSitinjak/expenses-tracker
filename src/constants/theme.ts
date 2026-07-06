@@ -29,7 +29,6 @@ export const colors = {
   subText: '#94A3B8',
   muted: '#64748B',
   primary: '#6366F1',
-  primaryDark: '#4F46E5',
   accent: '#22D3EE',
   success: '#22C55E',
   warning: '#F59E0B',
@@ -40,21 +39,25 @@ export const colors = {
 };
 
 // Stable accent color for the built-in categories.
+// Legacy keys are kept so older persisted category names still get stable colors.
 export const categoryColors: Record<string, string> = {
-  'Spending with MySunflow': '#EAB308',
+  Food: '#F97316',
+  Groceries: '#FBBF24',
+  Transport: '#38BDF8',
   Fuel: '#EF4444',
   Parking: '#0EA5E9',
-  Cash: '#14B8A6',
-  Groceries: '#FBBF24',
-  'Send to Family': '#F472B6',
-  Food: '#F97316',
-  Transport: '#38BDF8',
   Bills: '#A78BFA',
   Shopping: '#EC4899',
   Health: '#34D399',
+  Family: '#F472B6',
   Entertainment: '#FB7185',
-  Income: '#22C55E',
   Other: '#94A3B8',
+  'Cash Withdrawal': '#64748B',
+  // Legacy names from earlier app versions:
+  'Send to Family': '#F472B6',
+  'Spending with MySunflow': '#EAB308',
+  Cash: '#14B8A6',
+  Income: '#22C55E',
 };
 
 // Curated palette used to assign stable colors to custom categories.

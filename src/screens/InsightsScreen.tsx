@@ -6,11 +6,13 @@ import { Button } from '../components/Button';
 import { CategoryBar } from '../components/CategoryBar';
 import { LevelBanner } from '../components/LevelBanner';
 import { ProgressBar } from '../components/ProgressBar';
+import { SectionTitle } from '../components/SectionTitle';
+import { StatBox } from '../components/StatBox';
 import { colors, radius, spacing } from '../constants/theme';
 import { useExcelExport } from '../hooks/useExcelExport';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
-import { sumByCategory } from '../utils/analytics';
+import { onlyExpenses, sumByCategory, sumByMethod } from '../utils/analytics';
 import { computeGamification } from '../utils/gamification';
 import { formatCurrency } from '../utils/format';
 
@@ -21,27 +23,15 @@ export function InsightsScreen(_: InsightsScreenProps) {
   const { expenses, monthlyBudget, cashOnHand } = useBudgetStore();
   const { exporting, exportExpenses } = useExcelExport();
 
-  const onlyExpenses = useMemo(
-    () => expenses.filter((item) => item.type === 'expense'),
-    [expenses]
-  );
+  const onlyExpenseRows = useMemo(() => onlyExpenses(expenses), [expenses]);
 
   const game = useMemo(
     () => computeGamification(expenses, monthlyBudget),
     [expenses, monthlyBudget]
   );
 
-  const byCategory = useMemo(() => sumByCategory(onlyExpenses), [onlyExpenses]);
-
-  const byMethod = useMemo(() => {
-    let cash = 0;
-    let debit = 0;
-    for (const item of onlyExpenses) {
-      if (item.method === 'cash') cash += item.amount;
-      else debit += item.amount;
-    }
-    return { cash, debit };
-  }, [onlyExpenses]);
+  const byCategory = useMemo(() => sumByCategory(onlyExpenseRows), [onlyExpenseRows]);
+  const byMethod = useMemo(() => sumByMethod(expenses), [expenses]);
 
   const cash = cashOnHand();
   const methodTotal = byMethod.cash + byMethod.debit;
@@ -56,21 +46,12 @@ export function InsightsScreen(_: InsightsScreenProps) {
       </AnimatedCard>
 
       <View style={styles.statsRow}>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{expenses.length}</Text>
-          <Text style={styles.statLabel}>Transactions</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{game.daysTracked}</Text>
-          <Text style={styles.statLabel}>Days tracked</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{game.streak}🔥</Text>
-          <Text style={styles.statLabel}>Streak</Text>
-        </View>
+        <StatBox label="Transactions" value={String(expenses.length)} size="lg" />
+        <StatBox label="Days tracked" value={String(game.daysTracked)} size="lg" />
+        <StatBox label="Streak" value={`${game.streak}🔥`} size="lg" />
       </View>
 
-      <Text style={styles.sectionTitle}>Cash & payments</Text>
+      <SectionTitle>Cash & payments</SectionTitle>
       <AnimatedCard index={1} style={styles.methodCard}>
         <View style={styles.methodTop}>
           <Text style={styles.methodLabel}>💵 Cash on hand</Text>
@@ -95,9 +76,9 @@ export function InsightsScreen(_: InsightsScreenProps) {
         </View>
       </AnimatedCard>
 
-      <Text style={styles.sectionTitle}>
-        Achievements ({game.unlockedCount}/{game.achievements.length})
-      </Text>
+      <SectionTitle>
+        {`Achievements (${game.unlockedCount}/${game.achievements.length})`}
+      </SectionTitle>
       <View style={styles.grid}>
         {game.achievements.map((item) => (
           <View
@@ -113,7 +94,7 @@ export function InsightsScreen(_: InsightsScreenProps) {
         ))}
       </View>
 
-      <Text style={styles.sectionTitle}>Spending by category (all time)</Text>
+      <SectionTitle>Spending by category (all time)</SectionTitle>
       <AnimatedCard index={2}>
         {byCategory.length === 0 ? (
           <Text style={styles.empty}>No data yet.</Text>
@@ -153,31 +134,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.lg,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    alignItems: 'center',
-  },
-  statValue: {
-    color: colors.text,
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  statLabel: {
-    color: colors.subText,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-    marginBottom: spacing.sm,
   },
   methodCard: {
     marginBottom: spacing.lg,

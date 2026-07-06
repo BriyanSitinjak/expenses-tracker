@@ -36,7 +36,7 @@ const LEVEL_TITLES = [
 ];
 
 // Returns a flavor title for a given level.
-export function levelTitle(level: number): string {
+function levelTitle(level: number): string {
   return LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)] ?? 'Money Legend';
 }
 
@@ -63,6 +63,7 @@ function computeStreak(dayKeys: Set<string>): number {
 }
 
 // Derives all gamification state from the raw expense list and budget.
+// TECHDEBT: Exclude withdrawals from stats to match spending views elsewhere.
 export function computeGamification(
   expenses: Expense[],
   monthlyBudget: number

@@ -1,28 +1,23 @@
-// Default categories: your personal ones first, then common fallbacks.
-// These seed the store the first time the app runs; users can add more later.
+// Default categories should be small enough for quick manual entry.
+// Imports can still create more specific categories when the rules match.
 // Note: "Cash" is intentionally NOT a category anymore — cash is a payment
 // method, and withdrawing cash is a transfer (see WITHDRAWAL_CATEGORY).
 export const DEFAULT_CATEGORIES = [
-  'Spending with MySunflow',
+  'Food',
+  'Groceries',
+  'Transport',
   'Fuel',
   'Parking',
-  'Groceries',
-  'Send to Family',
-  'Food',
-  'Transport',
   'Bills',
   'Shopping',
   'Health',
+  'Family',
   'Entertainment',
   'Other',
 ];
 
-// Optional one-level sub-categories seeded for a few parents.
-export const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {
-  Food: ['Meal', 'Coffee', 'Snack', 'Ice cream'],
-  Bills: ['Electricity', 'Water', 'Internet', 'Phone'],
-  Groceries: ['Monthly', 'Weekly'],
-};
+// Start without sub-categories; users can add only the detail they actually use.
+export const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {};
 
 // Category that should always be available and kept last in the list.
 export const FALLBACK_CATEGORY = 'Other';
@@ -51,7 +46,7 @@ export function isWithdrawal(description: string): boolean {
 // Order matters: the first matching rule wins, so put specific ones first.
 export const CATEGORY_RULES: { category: string; keywords: string[] }[] = [
   {
-    category: 'Send to Family',
+    category: 'Family',
     keywords: ['transfer to', 'send to', 'kirim', 'parents', 'family', 'home', 'mom', 'dad', 'ibu', 'ayah', 'orang tua'],
   },
   {

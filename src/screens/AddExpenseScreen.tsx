@@ -4,12 +4,14 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { InlineAddRow } from '../components/InlineAddRow';
+import { MonthPeriodBanner } from '../components/MonthPeriodBanner';
 import { TextInputField } from '../components/TextInputField';
 import { WITHDRAWAL_CATEGORY } from '../constants/categories';
 import { colorForCategory, colors, radius, spacing } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { PaymentMethod } from '../types';
+import { defaultDateForMonth, getMonthLabel, isCurrentMonth, dayKeyToIso } from '../utils/date';
 import { formatCurrency } from '../utils/format';
 
 type AddExpenseScreenProps = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
@@ -23,7 +25,7 @@ const METHODS: { key: PaymentMethod; label: string; icon: string }[] = [
 
 // Screen to create a new expense or a cash withdrawal (transfer).
 export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
-  const { addExpense, addCategory, addSubcategory, categories, subcategories, cashOnHand } =
+  const { addExpense, addCategory, addSubcategory, categories, subcategories, cashOnHand, selectedMonthKey } =
     useBudgetStore();
 
   const [mode, setMode] = useState<Mode>('expense');
@@ -40,6 +42,12 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
   const [newSub, setNewSub] = useState('');
 
   const subOptions = subcategories[category] ?? [];
+  const viewingCurrentMonth = isCurrentMonth(selectedMonthKey);
+  const defaultDate = defaultDateForMonth(selectedMonthKey);
+
+  function expenseDate(): string {
+    return dayKeyToIso(defaultDate);
+  }
 
   // Creates + selects a new parent category.
   function handleAddCategory() {
@@ -83,6 +91,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         source: 'manual',
         method: 'cash',
         type: 'withdrawal',
+        date: expenseDate(),
       });
     } else {
       addExpense({
@@ -94,6 +103,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         source: 'manual',
         method,
         type: 'expense',
+        date: expenseDate(),
       });
     }
 
@@ -124,6 +134,13 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
           Recorded as a transfer (Debit → Cash). Excluded from spending. Cash on hand:{' '}
           {formatCurrency(cashOnHand())}
         </Text>
+      ) : null}
+
+      {!viewingCurrentMonth ? (
+        <MonthPeriodBanner
+          variant="callout"
+          message={`You are viewing ${getMonthLabel(selectedMonthKey)}. New entries will be saved in that month.`}
+        />
       ) : null}
 
       <Card>

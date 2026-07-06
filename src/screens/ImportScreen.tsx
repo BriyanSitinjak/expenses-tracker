@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { colorForCategory, colors, radius, spacing } from '../constants/theme';
+import { TransactionRow } from '../components/TransactionRow';
+import { colors, spacing } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { DraftExpense } from '../types';
@@ -146,32 +147,9 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
         ListHeaderComponent={listHeader}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }: { item: DraftExpense }) => {
-          const isWithdrawal = item.type === 'withdrawal';
-          return (
-            <View style={styles.draftRow}>
-              <View
-                style={[
-                  styles.dot,
-                  { backgroundColor: isWithdrawal ? colors.muted : colorForCategory(item.category) },
-                ]}
-              />
-              <View style={styles.draftBody}>
-                <Text style={styles.draftTitle} numberOfLines={1}>
-                  {item.merchant}
-                </Text>
-                <Text style={styles.draftMeta}>
-                  {isWithdrawal ? 'Transfer → Cash' : `${item.category} · 💳`} ·{' '}
-                  {new Date(item.date).toLocaleDateString()}
-                </Text>
-              </View>
-              <Text style={[styles.draftAmount, isWithdrawal && styles.draftTransfer]}>
-                {isWithdrawal ? '→ ' : '-'}
-                {formatCurrency(item.amount)}
-              </Text>
-            </View>
-          );
-        }}
+        renderItem={({ item }: { item: DraftExpense }) => (
+          <TransactionRow item={item} compact />
+        )}
       />
 
       {drafts.length > 0 ? (
@@ -241,41 +219,6 @@ const styles = StyleSheet.create({
   },
   loader: {
     paddingTop: spacing.xl,
-  },
-  draftRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  draftBody: {
-    flex: 1,
-  },
-  draftTitle: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  draftMeta: {
-    color: colors.subText,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  draftAmount: {
-    color: colors.danger,
-    fontWeight: '800',
-  },
-  draftTransfer: {
-    color: colors.muted,
   },
   footer: {
     padding: spacing.lg,

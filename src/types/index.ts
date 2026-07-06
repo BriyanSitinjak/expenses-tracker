@@ -1,4 +1,5 @@
 // Where a tracked transaction originated from.
+// TECHDEBT: 'bank' is reserved for a dedicated bank-sync source; imports currently use 'import'.
 export type ExpenseSource = 'manual' | 'import' | 'bank';
 
 // How a transaction was paid.
@@ -38,7 +39,7 @@ export type DraftExpense = {
 // Persisted application state.
 export type BudgetState = {
   monthlyBudget: number;
-  currentMonthKey: string;
+  selectedMonthKey: string;
   expenses: Expense[];
   categories: string[];
   subcategories: Record<string, string[]>;

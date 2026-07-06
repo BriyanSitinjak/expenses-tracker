@@ -3,6 +3,27 @@ export function getMonthKey(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// Returns the first local calendar date for a month key in "YYYY-MM-DD" format.
+export function getFirstDayOfMonth(monthKey: string): string {
+  return `${monthKey}-01`;
+}
+
+// Returns today's date when the month is current, otherwise the first day of the month.
+export function defaultDateForMonth(monthKey: string): string {
+  const today = new Date();
+  const todayKey = getMonthKey(today);
+  if (monthKey !== todayKey) return getFirstDayOfMonth(monthKey);
+
+  return getDayKey(today);
+}
+
+// Shifts a month key by a number of months.
+export function shiftMonthKey(monthKey: string, delta: number): string {
+  const [year, month] = monthKey.split('-').map(Number);
+  const date = new Date(year, (month ?? 1) - 1 + delta, 1);
+  return getMonthKey(date);
+}
+
 // Returns a local day key in "YYYY-MM-DD" format for streak/day grouping.
 export function getDayKey(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
@@ -15,6 +36,18 @@ export function getMonthLabel(monthKey: string): string {
   const [year, month] = monthKey.split('-').map(Number);
   const date = new Date(year, (month ?? 1) - 1, 1);
   return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
+// Returns true when a month key matches the real calendar month.
+export function isCurrentMonth(monthKey: string): boolean {
+  return monthKey === getMonthKey();
+}
+
+// Converts a day key ("YYYY-MM-DD") to a stable local noon ISO timestamp.
+export function dayKeyToIso(dayKey: string): string {
+  const [year, month, day] = dayKey.split('-').map(Number);
+  const date = new Date(year, (month ?? 1) - 1, day ?? 1, 12, 0, 0);
+  return date.toISOString();
 }
 
 // Tries hard to parse messy date strings found in bank statements.

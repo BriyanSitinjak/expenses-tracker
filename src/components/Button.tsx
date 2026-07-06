@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost'; // TECHDEBT: ghost variant is unused today
 
 type ButtonProps = {
   label: string;

@@ -1,24 +1,32 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { AchievementModal } from '../components/AchievementModal';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { AnimatedCard } from '../components/AnimatedCard';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { CategoryBar } from '../components/CategoryBar';
-import { LevelBanner } from '../components/LevelBanner';
+import { MonthPeriodBanner } from '../components/MonthPeriodBanner';
+import { MonthSwitcher } from '../components/MonthSwitcher';
 import { ProgressBar } from '../components/ProgressBar';
-import { colorForCategory, colors, radius, shadow, spacing } from '../constants/theme';
-import { useExcelExport } from '../hooks/useExcelExport';
+import { SectionTitle } from '../components/SectionTitle';
+import { StatBox } from '../components/StatBox';
+import { TransactionRow } from '../components/TransactionRow';
+import { colors, radius, shadow, spacing } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
-import { sumByCategory } from '../utils/analytics';
-import { getMonthLabel } from '../utils/date';
-import { Achievement, computeGamification } from '../utils/gamification';
+import { budgetSnapshot, monthCashStats, sumByCategory } from '../utils/analytics';
+import { getMonthKey, getMonthLabel, isCurrentMonth } from '../utils/date';
 import { formatCurrency } from '../utils/format';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
-// Returns a greeting based on the current hour.
 function greeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good morning';
@@ -27,77 +35,53 @@ function greeting(): string {
 }
 
 const ACTIONS = [
-  { key: 'AddExpense', label: 'Add', icon: '➕' },
-  { key: 'Import', label: 'Import', icon: '🏦' },
-  { key: 'Export', label: 'Export', icon: '📊' },
-  { key: 'Insights', label: 'Badges', icon: '🏆' },
+  { key: 'AddExpense', label: 'Add expense' },
+  { key: 'Import', label: 'Import' },
+  { key: 'Insights', label: 'Insights' },
 ] as const;
 
-// Main dashboard: budget, gamification, analytics, and transactions.
 export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const {
     monthlyBudget,
-    expenses,
-    currentMonthKey,
-    ensureCurrentMonth,
+    selectedMonthKey,
+    shiftSelectedMonth,
+    goToCurrentMonth,
     expensesForMonth,
     transactionsForMonth,
+    totalSpent,
+    remaining,
     cashOnHand,
     deleteExpense,
   } = useBudgetStore();
 
-  const { exporting, exportExpenses } = useExcelExport();
-  const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
-  const prevUnlocked = useRef<Set<string> | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    ensureCurrentMonth();
-  }, [ensureCurrentMonth]);
+  const viewingCurrentMonth = isCurrentMonth(selectedMonthKey);
+  const canGoNext = selectedMonthKey < getMonthKey();
 
-  const game = useMemo(
-    () => computeGamification(expenses, monthlyBudget),
-    [expenses, monthlyBudget]
-  );
-
-  // Detect achievements unlocked during this session and celebrate them.
-  useEffect(() => {
-    const unlocked = new Set(game.achievements.filter((a) => a.unlocked).map((a) => a.id));
-
-    if (prevUnlocked.current === null) {
-      prevUnlocked.current = unlocked;
-      return;
-    }
-
-    const fresh = game.achievements.filter(
-      (a) => a.unlocked && !prevUnlocked.current!.has(a.id)
-    );
-    prevUnlocked.current = unlocked;
-
-    if (fresh.length > 0) setNewAchievements(fresh);
-  }, [game]);
-
-  const monthExpenses = expensesForMonth(currentMonthKey);
-  const monthTransactions = transactionsForMonth(currentMonthKey);
-  const spent = monthExpenses.reduce((sum, item) => sum + item.amount, 0);
-  const remaining = monthlyBudget - spent;
-  const overBudget = remaining < 0;
-  const usage = monthlyBudget > 0 ? spent / monthlyBudget : 0;
+  const monthExpenses = expensesForMonth(selectedMonthKey);
+  const monthTransactions = transactionsForMonth(selectedMonthKey);
+  const spent = totalSpent(selectedMonthKey);
+  const budgetRemaining = remaining(selectedMonthKey);
+  const { overBudget, usage } = budgetSnapshot(spent, monthlyBudget);
   const cash = cashOnHand();
-  const withdrawnThisMonth = monthTransactions
-    .filter((item) => item.type === 'withdrawal')
-    .reduce((sum, item) => sum + item.amount, 0);
-  const cashSpentThisMonth = monthExpenses
-    .filter((item) => item.method === 'cash')
-    .reduce((sum, item) => sum + item.amount, 0);
+  const { withdrawn: withdrawnThisMonth, cashSpent: cashSpentThisMonth } =
+    monthCashStats(monthTransactions);
 
   const byCategory = useMemo(() => sumByCategory(monthExpenses), [monthExpenses]);
   const maxCategory = byCategory.length > 0 ? byCategory[0][1] : 0;
+  const periodLabel = viewingCurrentMonth ? 'this month' : getMonthLabel(selectedMonthKey);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await useBudgetStore.persist.rehydrate();
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
   function handleAction(key: (typeof ACTIONS)[number]['key']) {
-    if (key === 'Export') {
-      exportExpenses();
-      return;
-    }
     navigation.navigate(key);
   }
 
@@ -111,16 +95,28 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const header = (
     <View>
       <Text style={styles.greeting}>{greeting()} 👋</Text>
-      <Text style={styles.monthLabel}>{getMonthLabel(currentMonthKey)}</Text>
 
-      <AnimatedCard index={0} style={styles.bannerCard}>
-        <LevelBanner game={game} />
-      </AnimatedCard>
+      <MonthSwitcher
+        monthKey={selectedMonthKey}
+        transactionCount={monthTransactions.length}
+        onPrevious={() => shiftSelectedMonth(-1)}
+        onNext={() => shiftSelectedMonth(1)}
+        onGoToCurrent={goToCurrentMonth}
+        canGoNext={canGoNext}
+      />
 
-      <AnimatedCard index={1} style={styles.heroCard}>
-        <Text style={styles.heroLabel}>{overBudget ? 'Over budget by' : 'Remaining this month'}</Text>
+      {!viewingCurrentMonth ? (
+        <MonthPeriodBanner
+          message={`Showing data for ${getMonthLabel(selectedMonthKey)} only. Cash on hand stays all-time.`}
+        />
+      ) : null}
+
+      <AnimatedCard index={0} style={styles.heroCard}>
+        <Text style={styles.heroLabel}>
+          {overBudget ? `Over budget in ${periodLabel}` : `Remaining in ${periodLabel}`}
+        </Text>
         <AnimatedNumber
-          value={Math.abs(remaining)}
+          value={Math.abs(budgetRemaining)}
           format={(v) => formatCurrency(v)}
           adjustsFontSizeToFit
           numberOfLines={1}
@@ -137,68 +133,46 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
           <Text style={styles.heroMeta}>
             Spent <Text style={styles.heroMetaStrong}>{formatCurrency(spent)}</Text>
           </Text>
-          <Text style={styles.heroMeta}>
-            Budget{' '}
-            <Text style={styles.heroMetaStrong}>
-              {monthlyBudget > 0 ? formatCurrency(monthlyBudget) : 'not set'}
+          <Pressable onPress={() => navigation.navigate('BudgetSetup')} hitSlop={8}>
+            <Text style={styles.heroMeta}>
+              Budget{' '}
+              <Text style={[styles.heroMetaStrong, styles.budgetLink]}>
+                {monthlyBudget > 0 ? formatCurrency(monthlyBudget) : 'not set — tap to add'}
+              </Text>
             </Text>
-          </Text>
+          </Pressable>
         </View>
-      </AnimatedCard>
-
-      <AnimatedCard index={2} style={styles.cashCard}>
-        <View style={styles.cashHeader}>
-          <Text style={styles.cashLabel}>💵 Cash on hand</Text>
-          <AnimatedNumber
-            value={cash}
-            format={(v) => formatCurrency(v)}
-            adjustsFontSizeToFit
-            numberOfLines={1}
-            style={[styles.cashValue, cash < 0 && { color: colors.danger }]}
-          />
-        </View>
-        <View style={styles.cashRow}>
-          <Text style={styles.cashMeta}>
-            Withdrawn (mo) <Text style={styles.cashMetaStrong}>{formatCurrency(withdrawnThisMonth)}</Text>
-          </Text>
-          <Text style={styles.cashMeta}>
-            Cash spent (mo){' '}
-            <Text style={styles.cashMetaStrong}>{formatCurrency(cashSpentThisMonth)}</Text>
-          </Text>
+        <View style={styles.heroStats}>
+          <StatBox label="Cash (all-time)" value={formatCurrency(cash)} danger={cash < 0} />
+          <StatBox label="Withdrawn" value={formatCurrency(withdrawnThisMonth)} />
+          <StatBox label="Cash spent" value={formatCurrency(cashSpentThisMonth)} />
         </View>
         {cash < 0 ? (
-          <Text style={styles.cashWarn}>
-            You&apos;ve logged more cash spending than withdrawals — add a withdrawal or check entries.
-          </Text>
+          <Text style={styles.cashWarn}>Cash spending is higher than recorded withdrawals.</Text>
         ) : null}
       </AnimatedCard>
 
       <View style={styles.actions}>
-        {ACTIONS.map((action) => {
-          const isBusy = action.key === 'Export' && exporting;
-          return (
-            <Pressable
-              key={action.key}
-              onPress={() => handleAction(action.key)}
-              disabled={isBusy}
-              style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}
-            >
-              <Text style={styles.actionIcon}>{isBusy ? '⏳' : action.icon}</Text>
-              <Text style={styles.actionLabel}>{isBusy ? '...' : action.label}</Text>
-            </Pressable>
-          );
-        })}
+        {ACTIONS.map((action) => (
+          <Pressable
+            key={action.key}
+            onPress={() => handleAction(action.key)}
+            style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}
+          >
+            <Text style={styles.actionLabel}>{action.label}</Text>
+          </Pressable>
+        ))}
       </View>
 
-      <AnimatedCard index={3} style={styles.section}>
+      <AnimatedCard index={1} style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Top Categories</Text>
+          <SectionTitle style={styles.sectionTitleInline}>Top Categories</SectionTitle>
           <Pressable onPress={() => navigation.navigate('Insights')}>
             <Text style={styles.link}>See all</Text>
           </Pressable>
         </View>
         {byCategory.length === 0 ? (
-          <Text style={styles.empty}>No spending yet this month.</Text>
+          <Text style={styles.empty}>No spending in {getMonthLabel(selectedMonthKey)}.</Text>
         ) : (
           byCategory
             .slice(0, 4)
@@ -208,7 +182,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         )}
       </AnimatedCard>
 
-      <Text style={styles.listTitle}>Transactions</Text>
+      <SectionTitle>Transactions in {getMonthLabel(selectedMonthKey)}</SectionTitle>
     </View>
   );
 
@@ -220,52 +194,33 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         ListHeaderComponent={header}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+            title="Pull to refresh"
+            titleColor={colors.subText}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>🧾</Text>
-            <Text style={styles.emptyTitle}>No transactions yet</Text>
+            <Text style={styles.emptyTitle}>No transactions in this period</Text>
             <Text style={styles.emptyText}>
-              Import your bank statement or add an expense to get started.
+              {viewingCurrentMonth
+                ? 'Import your bank statement or add an expense to get started.'
+                : `Nothing recorded for ${getMonthLabel(selectedMonthKey)}. Try another month or add an expense.`}
             </Text>
           </View>
         }
-        renderItem={({ item }) => {
-          const isWithdrawal = item.type === 'withdrawal';
-          const iconColor = isWithdrawal ? colors.muted : colorForCategory(item.category);
-          const methodTag = item.method === 'cash' ? '💵' : '💳';
-          return (
-            <Pressable
-              onLongPress={() => confirmDelete(item.id, item.merchant ?? item.category)}
-              style={({ pressed }) => [styles.txCard, pressed && styles.txPressed]}
-            >
-              <View style={[styles.txIcon, { backgroundColor: iconColor }]}>
-                <Text style={styles.txIconText}>{isWithdrawal ? '↑' : item.category.slice(0, 1)}</Text>
-              </View>
-              <View style={styles.txBody}>
-                <Text style={styles.txTitle} numberOfLines={1}>
-                  {item.merchant ?? item.category}
-                </Text>
-                <Text style={styles.txMeta}>
-                  {isWithdrawal
-                    ? 'Transfer → Cash'
-                    : `${item.category}${item.subcategory ? ` · ${item.subcategory}` : ''} · ${methodTag}`}
-                  {' · '}
-                  {new Date(item.date).toLocaleDateString()}
-                  {item.source !== 'manual' ? ' · 🏦' : ''}
-                </Text>
-              </View>
-              <Text style={[styles.txAmount, isWithdrawal && styles.txTransfer]}>
-                {isWithdrawal ? '→ ' : '-'}
-                {formatCurrency(item.amount)}
-              </Text>
-            </Pressable>
-          );
-        }}
-      />
-
-      <AchievementModal
-        achievements={newAchievements}
-        onClose={() => setNewAchievements([])}
+        renderItem={({ item }) => (
+          <TransactionRow
+            item={item}
+            onLongPress={() => confirmDelete(item.id, item.merchant ?? item.category)}
+          />
+        )}
       />
     </View>
   );
@@ -283,15 +238,6 @@ const styles = StyleSheet.create({
   greeting: {
     color: colors.subText,
     fontSize: 15,
-  },
-  monthLabel: {
-    color: colors.text,
-    fontSize: 26,
-    fontWeight: '800',
-    marginBottom: spacing.lg,
-  },
-  bannerCard: {
-    backgroundColor: colors.cardAlt,
     marginBottom: spacing.md,
   },
   heroCard: {
@@ -322,38 +268,13 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: '700',
   },
-  cashCard: {
-    backgroundColor: colors.card,
-    marginBottom: spacing.md,
-  },
-  cashHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  cashLabel: {
-    color: colors.subText,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  cashValue: {
+  budgetLink: {
     color: colors.accent,
-    fontSize: 22,
-    fontWeight: '900',
-    maxWidth: '55%',
   },
-  cashRow: {
+  heroStats: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
-  },
-  cashMeta: {
-    color: colors.subText,
-    fontSize: 12,
-  },
-  cashMetaStrong: {
-    color: colors.text,
-    fontWeight: '700',
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
   cashWarn: {
     color: colors.warning,
@@ -372,17 +293,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: radius.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
-    gap: 4,
     ...shadow('sm'),
   },
   actionPressed: {
     backgroundColor: colors.cardAlt,
     transform: [{ scale: 0.97 }],
-  },
-  actionIcon: {
-    fontSize: 22,
   },
   actionLabel: {
     color: colors.text,
@@ -398,10 +315,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
+  sectionTitleInline: {
+    marginBottom: 0,
   },
   link: {
     color: colors.accent,
@@ -409,58 +324,6 @@ const styles = StyleSheet.create({
   },
   empty: {
     color: colors.subText,
-  },
-  listTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-    marginBottom: spacing.sm,
-  },
-  txCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    gap: spacing.md,
-  },
-  txPressed: {
-    backgroundColor: colors.cardAlt,
-  },
-  txIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  txIconText: {
-    color: '#0B1020',
-    fontWeight: '900',
-    fontSize: 18,
-  },
-  txBody: {
-    flex: 1,
-  },
-  txTitle: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  txMeta: {
-    color: colors.subText,
-    marginTop: 2,
-    fontSize: 12,
-  },
-  txAmount: {
-    color: colors.danger,
-    fontWeight: '800',
-  },
-  txTransfer: {
-    color: colors.muted,
   },
   emptyState: {
     alignItems: 'center',

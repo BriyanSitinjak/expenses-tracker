@@ -7,7 +7,8 @@ import {
   FALLBACK_CATEGORY,
 } from '../constants/categories';
 import { BudgetState, DraftExpense, Expense } from '../types';
-import { getMonthKey } from '../utils/date';
+import { computeCashOnHand, sumAmount } from '../utils/analytics';
+import { getMonthKey, shiftMonthKey } from '../utils/date';
 
 type ImportResult = {
   added: number;
@@ -32,7 +33,10 @@ type BudgetActions = {
   renameCategory: (oldName: string, newName: string) => boolean;
   deleteCategory: (name: string) => void;
   deleteSubcategory: (parent: string, name: string) => void;
-  ensureCurrentMonth: () => void;
+  setSelectedMonthKey: (monthKey: string) => void;
+  shiftSelectedMonth: (delta: number) => void;
+  goToCurrentMonth: () => void;
+  // TECHDEBT: Expose in a settings/debug screen when needed.
   resetAll: () => void;
 };
 
@@ -48,7 +52,7 @@ type BudgetStore = BudgetState & BudgetActions & BudgetSelectors;
 
 // Sums amounts of a list of transactions.
 function sumSpent(expenses: Expense[]): number {
-  return expenses.reduce((accumulator, item) => accumulator + item.amount, 0);
+  return sumAmount(expenses);
 }
 
 // Creates a stable unique id without external dependency.
@@ -95,12 +99,12 @@ function withSubcategory(
   return { ...map, [parent]: [...current, trimmed] };
 }
 
-// Main persisted zustand store for budget, transactions, and achievements.
+// Main persisted zustand store for budget and transactions.
 export const useBudgetStore = create<BudgetStore>()(
   persist(
     (set, get) => ({
       monthlyBudget: 0,
-      currentMonthKey: getMonthKey(),
+      selectedMonthKey: getMonthKey(),
       expenses: [],
       categories: [...DEFAULT_CATEGORIES],
       subcategories: { ...DEFAULT_SUBCATEGORIES },
@@ -285,13 +289,22 @@ export const useBudgetStore = create<BudgetStore>()(
         set((state) => ({ expenses: state.expenses.filter((item) => item.id !== id) }));
       },
 
-      // Keeps the active month key in sync without deleting historical data.
-      ensureCurrentMonth: () => {
-        const nowKey = getMonthKey();
+      // Sets which month the dashboard should display.
+      // TECHDEBT: Use for a month-picker jump when that UI is added.
+      setSelectedMonthKey: (monthKey) => {
+        set({ selectedMonthKey: monthKey });
+      },
 
-        if (nowKey !== get().currentMonthKey) {
-          set({ currentMonthKey: nowKey });
-        }
+      // Moves the viewed month backward or forward (not beyond today).
+      shiftSelectedMonth: (delta) => {
+        const next = shiftMonthKey(get().selectedMonthKey, delta);
+        if (next > getMonthKey()) return;
+        set({ selectedMonthKey: next });
+      },
+
+      // Jumps back to the real current calendar month.
+      goToCurrentMonth: () => {
+        set({ selectedMonthKey: getMonthKey() });
       },
 
       // Clears all data back to a fresh state.
@@ -301,13 +314,13 @@ export const useBudgetStore = create<BudgetStore>()(
           monthlyBudget: 0,
           categories: [...DEFAULT_CATEGORIES],
           subcategories: { ...DEFAULT_SUBCATEGORIES },
-          currentMonthKey: getMonthKey(),
+          selectedMonthKey: getMonthKey(),
         });
       },
 
       // Returns ALL transactions for a month (expenses + withdrawals).
       transactionsForMonth: (monthKey) => {
-        const key = monthKey ?? get().currentMonthKey;
+        const key = monthKey ?? get().selectedMonthKey;
         return get().expenses.filter((item) => getMonthKey(new Date(item.date)) === key);
       },
 
@@ -325,24 +338,15 @@ export const useBudgetStore = create<BudgetStore>()(
       remaining: (monthKey) => get().monthlyBudget - sumSpent(get().expensesForMonth(monthKey)),
 
       // Cash on hand = all cash withdrawn minus all cash spent (all-time).
-      cashOnHand: () => {
-        const expenses = get().expenses;
-        let withdrawn = 0;
-        let spent = 0;
-        for (const item of expenses) {
-          if (item.type === 'withdrawal') withdrawn += item.amount;
-          else if (item.method === 'cash') spent += item.amount;
-        }
-        return withdrawn - spent;
-      },
+      cashOnHand: () => computeCashOnHand(get().expenses),
     }),
     {
       name: 'expense-budget-store',
-      version: 5,
+      version: 6,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         monthlyBudget: state.monthlyBudget,
-        currentMonthKey: state.currentMonthKey,
+        selectedMonthKey: state.selectedMonthKey,
         expenses: state.expenses,
         categories: state.categories,
         subcategories: state.subcategories,
@@ -350,6 +354,7 @@ export const useBudgetStore = create<BudgetStore>()(
       migrate: (persisted) => {
         const state = (persisted ?? {}) as Partial<BudgetState> & {
           expenses?: Partial<Expense>[];
+          currentMonthKey?: string;
         };
         const expenses: Expense[] = (state.expenses ?? []).map((item) => ({
           id: item.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -377,7 +382,8 @@ export const useBudgetStore = create<BudgetStore>()(
 
         return {
           monthlyBudget: state.monthlyBudget ?? 0,
-          currentMonthKey: state.currentMonthKey ?? getMonthKey(),
+          // TECHDEBT: Remove currentMonthKey fallback after all clients migrate to v6.
+          selectedMonthKey: state.selectedMonthKey ?? state.currentMonthKey ?? getMonthKey(),
           expenses,
           categories,
           subcategories,

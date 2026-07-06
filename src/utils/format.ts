@@ -1,5 +1,5 @@
 // Currency configuration. IDR is typically shown without decimals.
-export const CURRENCY_SYMBOL = 'Rp';
+const CURRENCY_SYMBOL = 'Rp';
 const LOCALE = 'id-ID';
 
 // Formats a number as an IDR currency-style string, e.g. "Rp 25.000".
