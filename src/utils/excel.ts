@@ -4,7 +4,6 @@ import { Expense } from '../types';
 import { paymentStats } from './analytics';
 import { getMonthLabel } from './date';
 
-// Lazily-imported native modules so web builds don't choke on them.
 async function getNativeFsModules() {
   const FileSystem = await import('expo-file-system/legacy');
   const Sharing = await import('expo-sharing');
@@ -16,7 +15,30 @@ type ExportResult = {
   shared: boolean;
 };
 
-// Builds a styled-ish workbook from expenses and exports it as .xlsx.
+// Converts a Uint8Array workbook into base64 without blowing the call stack.
+function uint8ToBase64(bytes: Uint8Array): string {
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const slice = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...slice);
+  }
+  return btoa(binary);
+}
+
+function safeLocaleDate(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso.slice(0, 10) : date.toLocaleDateString();
+}
+
+function safeLocaleTime(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? ''
+    : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// Builds a workbook from expenses and exports it as .xlsx.
 export async function exportExpensesToExcel(
   expenses: Expense[],
   monthlyBudget: number
@@ -26,8 +48,8 @@ export async function exportExpensesToExcel(
   );
 
   const transactionRows = sorted.map((item) => ({
-    Date: new Date(item.date).toLocaleDateString(),
-    Time: new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    Date: safeLocaleDate(item.date),
+    Time: safeLocaleTime(item.date),
     Merchant: item.merchant ?? '',
     Category: item.category,
     Subcategory: item.subcategory ?? '',
@@ -38,7 +60,6 @@ export async function exportExpensesToExcel(
     Note: item.note ?? '',
   }));
 
-  // Only real spending counts toward totals; withdrawals are transfers.
   const stats = paymentStats(expenses);
   const { totalSpent, cashSpent, debitSpent, withdrawn, cashOnHand, byCategory, byMonth } = stats;
 
@@ -111,13 +132,27 @@ export async function exportExpensesToExcel(
     return { shared: true };
   }
 
-  const base64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+  const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as Uint8Array;
+  const base64 = uint8ToBase64(bytes);
   const { FileSystem, Sharing } = await getNativeFsModules();
-  const fileUri = `${FileSystem.documentDirectory}${fileName}`;
 
-  await FileSystem.writeAsStringAsync(fileUri, base64, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  const directory = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+  if (!directory) {
+    throw new Error('No writable directory available on this device.');
+  }
+
+  const fileUri = `${directory}${fileName}`;
+
+  try {
+    const info = await FileSystem.getInfoAsync(fileUri);
+    if (info.exists) {
+      await FileSystem.deleteAsync(fileUri, { idempotent: true });
+    }
+  } catch {
+    // Ignore cleanup errors and attempt a fresh write.
+  }
+
+  await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: 'base64' });
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {

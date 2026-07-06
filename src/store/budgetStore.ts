@@ -342,7 +342,7 @@ export const useBudgetStore = create<BudgetStore>()(
     }),
     {
       name: 'expense-budget-store',
-      version: 6,
+      version: 7,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         monthlyBudget: state.monthlyBudget,
@@ -369,9 +369,8 @@ export const useBudgetStore = create<BudgetStore>()(
           type: item.type ?? 'expense',
         }));
 
-        // Start from defaults, then merge any saved + in-use categories.
+        // Reset to new default categories, then add any categories used by saved transactions.
         let categories = [...DEFAULT_CATEGORIES];
-        for (const name of state.categories ?? []) categories = withCategory(categories, name);
         for (const item of expenses) categories = withCategory(categories, item.category);
 
         // Merge saved sub-categories on top of defaults.

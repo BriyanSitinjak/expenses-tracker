@@ -44,6 +44,11 @@ export const categoryColors: Record<string, string> = {
   Food: '#F97316',
   Groceries: '#FBBF24',
   Transport: '#38BDF8',
+  Investment: '#818CF8',
+  'Tribute/Offering': '#A78BFA',
+  'Self-Reward': '#EC4899',
+  'Cash Withdrawal': '#64748B',
+  // Legacy names from earlier app versions:
   Fuel: '#EF4444',
   Parking: '#0EA5E9',
   Bills: '#A78BFA',
@@ -52,8 +57,6 @@ export const categoryColors: Record<string, string> = {
   Family: '#F472B6',
   Entertainment: '#FB7185',
   Other: '#94A3B8',
-  'Cash Withdrawal': '#64748B',
-  // Legacy names from earlier app versions:
   'Send to Family': '#F472B6',
   'Spending with MySunflow': '#EAB308',
   Cash: '#14B8A6',

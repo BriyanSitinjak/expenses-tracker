@@ -1,31 +1,21 @@
-// Default categories should be small enough for quick manual entry.
-// Imports can still create more specific categories when the rules match.
-// Note: "Cash" is intentionally NOT a category anymore — cash is a payment
-// method, and withdrawing cash is a transfer (see WITHDRAWAL_CATEGORY).
+// Default categories for quick manual entry.
+// Note: "Cash" is intentionally NOT a category — cash is a payment method.
 export const DEFAULT_CATEGORIES = [
   'Food',
   'Groceries',
   'Transport',
-  'Fuel',
-  'Parking',
-  'Bills',
-  'Shopping',
-  'Health',
-  'Family',
-  'Entertainment',
-  'Other',
+  'Investment',
+  'Tribute/Offering',
+  'Self-Reward',
 ];
 
-// Start without sub-categories; users can add only the detail they actually use.
 export const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {};
 
-// Category that should always be available and kept last in the list.
-export const FALLBACK_CATEGORY = 'Other';
+// Category kept for imports/deletes when no better match exists.
+export const FALLBACK_CATEGORY = 'Self-Reward';
 
-// Special system category used for cash withdrawals (transfers, not spending).
 export const WITHDRAWAL_CATEGORY = 'Cash Withdrawal';
 
-// Descriptions that indicate a cash withdrawal / transfer rather than a purchase.
 export const WITHDRAWAL_KEYWORDS = [
   'atm',
   'cash withdrawal',
@@ -36,27 +26,12 @@ export const WITHDRAWAL_KEYWORDS = [
   'cardless',
 ];
 
-// Returns true when a statement line looks like a cash withdrawal.
 export function isWithdrawal(description: string): boolean {
   const text = description.toLowerCase();
   return WITHDRAWAL_KEYWORDS.some((keyword) => text.includes(keyword));
 }
 
-// Keyword rules used to auto-categorize imported bank transactions.
-// Order matters: the first matching rule wins, so put specific ones first.
 export const CATEGORY_RULES: { category: string; keywords: string[] }[] = [
-  {
-    category: 'Family',
-    keywords: ['transfer to', 'send to', 'kirim', 'parents', 'family', 'home', 'mom', 'dad', 'ibu', 'ayah', 'orang tua'],
-  },
-  {
-    category: 'Fuel',
-    keywords: ['fuel', 'petrol', 'gas station', 'shell', 'pertamina', 'spbu', 'bensin', 'pertalite', 'pertamax', 'bp '],
-  },
-  {
-    category: 'Parking',
-    keywords: ['parking', 'parkir', 'toll', 'tol ', 'e-toll', 'etoll', 'secure parking'],
-  },
   {
     category: 'Groceries',
     keywords: ['supermarket', 'grocery', 'groceries', 'mart', 'minimart', 'indomaret', 'alfamart', 'superindo', 'hypermart', 'hero', 'ranch market', 'market'],
@@ -67,27 +42,22 @@ export const CATEGORY_RULES: { category: string; keywords: string[] }[] = [
   },
   {
     category: 'Transport',
-    keywords: ['uber', 'grab', 'gojek', 'gocar', 'taxi', 'mrt', 'train', 'transit', 'flight', 'airlines', 'airways', 'krl', 'busway', 'transjakarta'],
+    keywords: ['uber', 'grab', 'gojek', 'gocar', 'taxi', 'mrt', 'train', 'transit', 'flight', 'airlines', 'fuel', 'petrol', 'gas station', 'shell', 'pertamina', 'spbu', 'parking', 'parkir', 'toll', 'tol '],
   },
   {
-    category: 'Entertainment',
-    keywords: ['netflix', 'spotify', 'youtube', 'disney', 'cinema', 'movie', 'game', 'steam', 'playstation', 'cinemaxx', 'xxi', 'concert', 'hbo'],
+    category: 'Investment',
+    keywords: ['invest', 'stock', 'crypto', 'reksadana', 'saham', 'bibit', 'ajaib', 'pluang', 'trading', 'broker', 'etf', 'mutual fund'],
   },
   {
-    category: 'Shopping',
-    keywords: ['amazon', 'shopee', 'tokopedia', 'lazada', 'store', 'mall', 'fashion', 'uniqlo', 'zara', 'h&m', 'ikea', 'shop', 'apple store', 'electronics', 'blibli'],
+    category: 'Tribute/Offering',
+    keywords: ['donation', 'charity', 'church', 'mosque', 'temple', 'zakat', 'infak', 'sedekah', 'offering', 'tithe', 'donasi', 'sumbangan'],
   },
   {
-    category: 'Health',
-    keywords: ['pharmacy', 'clinic', 'hospital', 'doctor', 'dental', 'apotek', 'guardian', 'kimia farma', 'health', 'gym', 'fitness'],
-  },
-  {
-    category: 'Bills',
-    keywords: ['electric', 'water', 'internet', 'wifi', 'telkom', 'indihome', 'pln', 'pdam', 'phone', 'pulsa', 'mobile', 'insurance', 'rent', 'mortgage', 'subscription', 'utility', 'tax', 'bpjs'],
+    category: 'Self-Reward',
+    keywords: ['netflix', 'spotify', 'cinema', 'movie', 'game', 'shopping', 'shopee', 'tokopedia', 'mall', 'fashion', 'spa', 'hobby', 'concert'],
   },
 ];
 
-// Picks the most likely category for a transaction description.
 export function autoCategory(description: string): string {
   const text = description.toLowerCase();
 

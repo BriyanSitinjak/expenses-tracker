@@ -1,12 +1,12 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { colorForCategory, colors, radius, spacing } from '../constants/theme';
-import { Expense } from '../types';
+import { Expense, PaymentMethod } from '../types';
 import { formatCurrency } from '../utils/format';
 
 export type TransactionRowData = Pick<
   Expense,
-  'category' | 'subcategory' | 'merchant' | 'date' | 'amount' | 'type' | 'method' | 'source'
+  'category' | 'subcategory' | 'merchant' | 'note' | 'date' | 'amount' | 'type' | 'method' | 'source'
 >;
 
 type TransactionRowProps = {
@@ -16,22 +16,36 @@ type TransactionRowProps = {
   compact?: boolean;
 };
 
-function formatMeta(item: TransactionRowData): string {
-  const isWithdrawal = item.type === 'withdrawal';
-  if (isWithdrawal) return 'Transfer → Cash';
-
-  const methodTag = item.method === 'cash' ? '💵' : '💳';
-  const categoryLine = `${item.category}${item.subcategory ? ` · ${item.subcategory}` : ''} · ${methodTag}`;
-  const dateLine = new Date(item.date).toLocaleDateString();
-  const sourceTag = item.source && item.source !== 'manual' ? ' · 🏦' : '';
-  return `${categoryLine} · ${dateLine}${sourceTag}`;
+function methodStyles(method: PaymentMethod, isWithdrawal: boolean) {
+  if (isWithdrawal) {
+    return {
+      row: styles.rowWithdrawal,
+      badge: styles.badgeWithdrawal,
+      badgeText: 'Transfer',
+      amount: styles.transfer,
+    };
+  }
+  if (method === 'cash') {
+    return {
+      row: styles.rowCash,
+      badge: styles.badgeCash,
+      badgeText: '💵 Cash',
+      amount: styles.amountCash,
+    };
+  }
+  return {
+    row: styles.rowDebit,
+    badge: styles.badgeDebit,
+    badgeText: '💳 Debit',
+    amount: styles.amountDebit,
+  };
 }
 
 // Shared transaction list row for dashboard and import preview.
 export function TransactionRow({ item, onLongPress, style, compact }: TransactionRowProps) {
   const isWithdrawal = item.type === 'withdrawal';
   const iconColor = isWithdrawal ? colors.muted : colorForCategory(item.category);
-  const title = item.merchant ?? item.category;
+  const payment = methodStyles(item.method, isWithdrawal);
 
   const content = (
     <>
@@ -46,30 +60,61 @@ export function TransactionRow({ item, onLongPress, style, compact }: Transactio
         ) : null}
       </View>
       <View style={styles.body}>
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
-        <Text style={styles.meta}>{formatMeta(item)}</Text>
+        {compact ? (
+          <>
+            <Text style={styles.title} numberOfLines={1}>
+              {item.merchant ?? item.category}
+            </Text>
+            <Text style={styles.meta} numberOfLines={1}>
+              {isWithdrawal
+                ? 'Transfer → Cash'
+                : `${item.category} · ${item.method === 'cash' ? '💵' : '💳'}`}
+              {' · '}
+              {new Date(item.date).toLocaleDateString()}
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text style={styles.category} numberOfLines={1}>
+              {item.category}
+            </Text>
+            {item.merchant ? (
+              <Text style={styles.detail} numberOfLines={1}>
+                {item.merchant}
+              </Text>
+            ) : null}
+            {item.note ? (
+              <Text style={styles.note} numberOfLines={2}>
+                {item.note}
+              </Text>
+            ) : null}
+            <View style={payment.badge}>
+              <Text style={styles.badgeLabel}>{payment.badgeText}</Text>
+            </View>
+          </>
+        )}
       </View>
-      <Text style={[styles.amount, isWithdrawal && styles.transfer]}>
+      <Text style={[styles.amount, payment.amount]}>
         {isWithdrawal ? '→ ' : '-'}
         {formatCurrency(item.amount)}
       </Text>
     </>
   );
 
+  const rowStyle = [styles.row, !compact && payment.row, style];
+
   if (onLongPress) {
     return (
       <Pressable
         onLongPress={onLongPress}
-        style={({ pressed }) => [styles.row, pressed && styles.pressed, style]}
+        style={({ pressed }) => [rowStyle, pressed && styles.pressed]}
       >
         {content}
       </Pressable>
     );
   }
 
-  return <View style={[styles.row, style]}>{content}</View>;
+  return <View style={rowStyle}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -83,6 +128,21 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.sm,
     padding: spacing.md,
+  },
+  rowDebit: {
+    backgroundColor: colors.primary + '10',
+    borderLeftColor: colors.primary,
+    borderLeftWidth: 3,
+  },
+  rowCash: {
+    backgroundColor: colors.success + '10',
+    borderLeftColor: colors.success,
+    borderLeftWidth: 3,
+  },
+  rowWithdrawal: {
+    backgroundColor: colors.bgElevated,
+    borderLeftColor: colors.muted,
+    borderLeftWidth: 3,
   },
   pressed: {
     backgroundColor: colors.cardAlt,
@@ -106,6 +166,22 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
+    gap: 2,
+  },
+  category: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  detail: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  note: {
+    color: colors.subText,
+    fontSize: 12,
+    lineHeight: 16,
   },
   title: {
     color: colors.text,
@@ -117,9 +193,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  badgeDebit: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary + '22',
+    borderRadius: radius.pill,
+    marginTop: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  badgeCash: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.success + '22',
+    borderRadius: radius.pill,
+    marginTop: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  badgeWithdrawal: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.track,
+    borderRadius: radius.pill,
+    marginTop: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  badgeLabel: {
+    color: colors.subText,
+    fontSize: 11,
+    fontWeight: '700',
+  },
   amount: {
-    color: colors.danger,
     fontWeight: '800',
+  },
+  amountDebit: {
+    color: colors.primary,
+  },
+  amountCash: {
+    color: colors.success,
   },
   transfer: {
     color: colors.muted,

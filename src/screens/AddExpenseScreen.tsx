@@ -1,6 +1,15 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { InlineAddRow } from '../components/InlineAddRow';
@@ -33,7 +42,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
   const [merchant, setMerchant] = useState('');
   const [note, setNote] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('debit');
-  const [category, setCategory] = useState(categories[0] ?? 'Other');
+  const [category, setCategory] = useState(categories[0] ?? 'Food');
   const [subcategory, setSubcategory] = useState<string | undefined>(undefined);
 
   const [addingCat, setAddingCat] = useState(false);
@@ -116,7 +125,16 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content} style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.segment}>
         {(['expense', 'withdrawal'] as Mode[]).map((item) => {
           const active = item === mode;
@@ -270,7 +288,8 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
           onPress={handleSave}
         />
       </Card>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -281,6 +300,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    paddingBottom: spacing.xxl * 2,
   },
   segment: {
     flexDirection: 'row',

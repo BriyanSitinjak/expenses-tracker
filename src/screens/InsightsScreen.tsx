@@ -21,7 +21,7 @@ type InsightsScreenProps = NativeStackScreenProps<RootStackParamList, 'Insights'
 // Insights screen: achievements, lifetime analytics, and Excel export.
 export function InsightsScreen(_: InsightsScreenProps) {
   const { expenses, monthlyBudget, cashOnHand } = useBudgetStore();
-  const { exporting, exportExpenses } = useExcelExport();
+  const { exporting, exportingBackup, exportExpenses, exportBackup } = useExcelExport();
 
   const onlyExpenseRows = useMemo(() => onlyExpenses(expenses), [expenses]);
 
@@ -105,12 +105,24 @@ export function InsightsScreen(_: InsightsScreenProps) {
         )}
       </AnimatedCard>
 
+      <SectionTitle>Export data</SectionTitle>
+      <Text style={styles.exportHint}>
+        Excel is best for viewing reports. CSV backup keeps every field and can be imported again.
+      </Text>
       <View style={styles.exportWrap}>
         <Button
           icon="📊"
           label={exporting ? 'Exporting…' : 'Export all to Excel'}
           onPress={exportExpenses}
-          disabled={exporting}
+          disabled={exporting || exportingBackup}
+        />
+        <Button
+          icon="💾"
+          variant="secondary"
+          label={exportingBackup ? 'Exporting…' : 'Export backup (CSV)'}
+          onPress={exportBackup}
+          disabled={exporting || exportingBackup}
+          style={styles.exportBtn}
         />
       </View>
     </ScrollView>
@@ -208,7 +220,17 @@ const styles = StyleSheet.create({
   empty: {
     color: colors.subText,
   },
+  exportHint: {
+    color: colors.subText,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: spacing.sm,
+  },
   exportWrap: {
     marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  exportBtn: {
+    marginTop: 0,
   },
 });

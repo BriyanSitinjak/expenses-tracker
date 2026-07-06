@@ -1,5 +1,6 @@
 import { autoCategory, isWithdrawal, WITHDRAWAL_CATEGORY } from '../constants/categories';
-import { DraftExpense } from '../types';
+import { DraftExpense, ExpenseSource, PaymentMethod, TxType } from '../types';
+import { isBackupCsv } from './backup';
 import { parseFlexibleDate } from './date';
 
 // Minimal CSV parser that handles quoted fields and embedded commas.
@@ -81,8 +82,11 @@ function findColumn(headers: string[], keywords: string[]): number {
   return headers.findIndex((header) => keywords.some((keyword) => header.includes(keyword)));
 }
 
+export type ImportFormat = 'bank' | 'backup';
+
 export type ParseReport = {
   drafts: DraftExpense[];
+  format: ImportFormat;
   totalRows: number;
   incomeSkipped: number;
   invalidSkipped: number;
@@ -94,6 +98,7 @@ export function parseBankCsv(text: string): ParseReport {
   const rows = parseCsv(text);
   const report: ParseReport = {
     drafts: [],
+    format: 'bank',
     totalRows: 0,
     incomeSkipped: 0,
     invalidSkipped: 0,
@@ -182,6 +187,87 @@ export function parseBankCsv(text: string): ParseReport {
   }
 
   return report;
+}
+
+function isTxType(value: string): value is TxType {
+  return value === 'expense' || value === 'withdrawal';
+}
+
+function isPaymentMethod(value: string): value is PaymentMethod {
+  return value === 'debit' || value === 'cash';
+}
+
+function isExpenseSource(value: string): value is ExpenseSource {
+  return value === 'manual' || value === 'import' || value === 'bank';
+}
+
+// Parses a CSV produced by exportTransactionsBackup (app backup format).
+export function parseBackupCsv(text: string): ParseReport {
+  const rows = parseCsv(text);
+  const report: ParseReport = {
+    drafts: [],
+    format: 'backup',
+    totalRows: 0,
+    incomeSkipped: 0,
+    invalidSkipped: 0,
+    withdrawals: 0,
+  };
+  if (rows.length === 0) return report;
+
+  const headers = rows[0].map((cell) => cell.trim().toLowerCase());
+  const col = (name: string) => headers.indexOf(name);
+
+  const dateCol = col('date');
+  const amountCol = col('amount');
+  const categoryCol = col('category');
+  const subcategoryCol = col('subcategory');
+  const merchantCol = col('merchant');
+  const typeCol = col('type');
+  const methodCol = col('method');
+  const sourceCol = col('source');
+  const noteCol = col('note');
+
+  for (const cells of rows.slice(1)) {
+    report.totalRows += 1;
+
+    const dateRaw = cells[dateCol]?.trim() ?? '';
+    const date = new Date(dateRaw);
+    const amount = parseAmount(cells[amountCol] ?? '');
+    const category = cells[categoryCol]?.trim() ?? '';
+    const typeRaw = (cells[typeCol]?.trim() ?? 'expense').toLowerCase();
+    const methodRaw = (cells[methodCol]?.trim() ?? 'debit').toLowerCase();
+    const sourceRaw = (cells[sourceCol]?.trim() ?? 'import').toLowerCase();
+
+    if (Number.isNaN(date.getTime()) || Number.isNaN(amount) || amount <= 0 || !category) {
+      report.invalidSkipped += 1;
+      continue;
+    }
+
+    const type: TxType = isTxType(typeRaw) ? typeRaw : 'expense';
+    const method: PaymentMethod = isPaymentMethod(methodRaw) ? methodRaw : 'debit';
+    const source: ExpenseSource = isExpenseSource(sourceRaw) ? sourceRaw : 'import';
+    if (type === 'withdrawal') report.withdrawals += 1;
+
+    report.drafts.push({
+      date: date.toISOString(),
+      amount,
+      category,
+      subcategory: cells[subcategoryCol]?.trim() || undefined,
+      merchant: cells[merchantCol]?.trim() || undefined,
+      note: cells[noteCol]?.trim() || undefined,
+      source,
+      method,
+      type,
+    });
+  }
+
+  return report;
+}
+
+// Auto-detects bank statement vs app backup CSV and parses accordingly.
+export function parseImportFile(text: string): ParseReport {
+  if (isBackupCsv(text)) return parseBackupCsv(text);
+  return parseBankCsv(text);
 }
 
 // Generates a realistic sample bank statement (CSV) for the in-app demo.

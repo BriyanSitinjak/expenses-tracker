@@ -18,7 +18,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { DraftExpense } from '../types';
 import { formatCurrency } from '../utils/format';
-import { parseBankCsv, ParseReport, sampleBankStatementCsv } from '../utils/import';
+import { parseImportFile, ParseReport, sampleBankStatementCsv } from '../utils/import';
 
 type ImportScreenProps = NativeStackScreenProps<RootStackParamList, 'Import'>;
 
@@ -40,13 +40,15 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
   const [loading, setLoading] = useState(false);
 
   function ingest(text: string, name: string) {
-    const result = parseBankCsv(text);
+    const result = parseImportFile(text);
     setReport(result);
     setFileName(name);
     if (result.drafts.length === 0) {
       Alert.alert(
-        'No expenses found',
-        'We could not detect any outgoing transactions in that file. Make sure it has Date, Description and Amount (or Debit) columns.'
+        'No transactions found',
+        result.format === 'backup'
+          ? 'This backup file has no valid rows. Export a new backup from Insights and try again.'
+          : 'We could not detect outgoing transactions. Use an app backup CSV, or a bank file with Date, Description and Amount (or Debit) columns.'
       );
     }
   }
@@ -93,10 +95,11 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
   const listHeader = (
     <View>
       <Card style={styles.infoCard}>
-        <Text style={styles.infoTitle}>🏦 Import from your bank</Text>
+        <Text style={styles.infoTitle}>🏦 Import transactions</Text>
         <Text style={styles.infoText}>
-          In your mobile banking app, export your transaction history as a CSV/Excel file (often
-          under Statements or History), then import it here. We auto-detect amounts and categories.
+          Import a bank statement CSV, or re-import an app backup CSV exported from Insights.
+          Bank files need Date, Description and Amount (or Debit) columns. Backup files keep
+          categories, payment method, and notes.
         </Text>
         <View style={styles.buttonRow}>
           <Button
@@ -119,8 +122,13 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
         <View style={styles.summary}>
           <Text style={styles.summaryFile}>{fileName}</Text>
           <Text style={styles.summaryStats}>
-            {expenseCount} expenses · {report.withdrawals} cash withdrawals ·{' '}
-            {report.incomeSkipped} income skipped · {report.invalidSkipped} ignored
+            {report.format === 'backup' ? 'App backup' : 'Bank statement'} · {expenseCount} expenses
+            · {report.withdrawals} cash withdrawals
+            {report.format === 'bank'
+              ? ` · ${report.incomeSkipped} income skipped · ${report.invalidSkipped} ignored`
+              : report.invalidSkipped > 0
+                ? ` · ${report.invalidSkipped} invalid rows skipped`
+                : ''}
           </Text>
           <Text style={styles.summaryTotal}>Spending total: {formatCurrency(spendTotal)}</Text>
           {report.withdrawals > 0 ? (
