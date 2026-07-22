@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as XLSX from 'xlsx';
 import { Expense } from '../types';
 import { paymentStats } from './analytics';
+import { BACKUP_CSV_HEADERS, expensesToBackupRows } from './backup';
 import { getMonthLabel } from './date';
 
 async function getNativeFsModules() {
@@ -124,6 +125,47 @@ export async function exportExpensesToExcel(
     { wch: 28 },
   ];
   XLSX.utils.book_append_sheet(workbook, txSheet, 'Transactions');
+
+  // Machine-readable sheet used for re-import (same fields as CSV backup).
+  const backupRows = expensesToBackupRows(expenses);
+  const backupAoa: (string | number)[][] = [
+    [...BACKUP_CSV_HEADERS],
+    ...backupRows.map((row) => [
+      row.date,
+      row.amount,
+      row.category,
+      row.subcategory,
+      row.merchant,
+      row.type,
+      row.method,
+      row.source,
+      row.note,
+    ]),
+  ];
+  if (backupRows.length === 0) {
+    backupAoa.push(Array(BACKUP_CSV_HEADERS.length).fill(''));
+  }
+  const backupSheet = XLSX.utils.aoa_to_sheet(backupAoa);
+  // Keep ISO timestamps as text so Excel does not coerce them into locale dates.
+  for (let rowIndex = 2; rowIndex <= backupRows.length + 1; rowIndex += 1) {
+    const cell = backupSheet[`A${rowIndex}`];
+    if (!cell) continue;
+    cell.t = 's';
+    cell.v = String(cell.v ?? '');
+    delete cell.w;
+  }
+  backupSheet['!cols'] = [
+    { wch: 24 },
+    { wch: 12 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 22 },
+    { wch: 11 },
+    { wch: 8 },
+    { wch: 10 },
+    { wch: 28 },
+  ];
+  XLSX.utils.book_append_sheet(workbook, backupSheet, 'Backup');
 
   const fileName = `expenses-${new Date().toISOString().slice(0, 10)}.xlsx`;
 

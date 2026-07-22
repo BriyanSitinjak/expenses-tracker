@@ -3,9 +3,9 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
+  ListRenderItem,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -24,13 +24,12 @@ import { colors, radius, shadow, spacing } from '../constants/theme';
 import { useExcelExport } from '../hooks/useExcelExport';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
+import { Expense } from '../types';
 import { budgetSnapshot, monthCashStats, sumByCategory } from '../utils/analytics';
 import { getMonthKey, getMonthLabel, isCurrentMonth } from '../utils/date';
 import { formatCurrency } from '../utils/format';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
-
-const TX_LIST_MAX_HEIGHT = 300;
 
 const TOOL_ACTIONS = [
   { key: 'Import', label: 'Import' },
@@ -91,8 +90,8 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   function handleToolAction(key: (typeof TOOL_ACTIONS)[number]['key']) {
     if (key === 'Export') {
-      Alert.alert('Export data', 'Choose a format', [
-        { text: 'Excel report', onPress: exportExpenses },
+      Alert.alert('Export data', 'Both formats can be imported again later.', [
+        { text: 'Excel (.xlsx)', onPress: exportExpenses },
         { text: 'CSV backup', onPress: exportBackup },
         { text: 'Cancel', style: 'cancel' },
       ]);
@@ -101,17 +100,148 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
     navigation.navigate(key);
   }
 
-  function confirmDelete(id: string, label: string) {
-    Alert.alert('Delete transaction', `Remove "${label}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteExpense(id) },
-    ]);
-  }
+  const confirmDelete = useCallback(
+    (id: string, label: string) => {
+      Alert.alert('Delete transaction', `Remove "${label}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteExpense(id) },
+      ]);
+    },
+    [deleteExpense],
+  );
+
+  const renderItem: ListRenderItem<Expense> = useCallback(
+    ({ item }) => (
+      <TransactionRow
+        item={item}
+        onLongPress={() => confirmDelete(item.id, item.merchant ?? item.category)}
+      />
+    ),
+    [confirmDelete],
+  );
+
+  const listHeader = (
+    <>
+      <Text style={styles.greeting}>{greeting()} 👋</Text>
+
+      <MonthSwitcher
+        monthKey={selectedMonthKey}
+        transactionCount={monthTransactions.length}
+        onPrevious={() => shiftSelectedMonth(-1)}
+        onNext={() => shiftSelectedMonth(1)}
+        onGoToCurrent={goToCurrentMonth}
+        canGoNext={canGoNext}
+      />
+
+      {!viewingCurrentMonth ? (
+        <MonthPeriodBanner
+          message={`Showing data for ${getMonthLabel(selectedMonthKey)} only. Cash on hand stays all-time.`}
+        />
+      ) : null}
+
+      <AnimatedCard index={0} style={styles.heroCard}>
+        <Text style={styles.heroLabel}>
+          {overBudget ? `Over budget in ${periodLabel}` : `Remaining in ${periodLabel}`}
+        </Text>
+        <AnimatedNumber
+          value={Math.abs(budgetRemaining)}
+          format={(v) => formatCurrency(v)}
+          adjustsFontSizeToFit
+          numberOfLines={1}
+          style={[styles.heroAmount, { color: overBudget ? colors.danger : colors.success }]}
+        />
+        <View style={styles.heroProgress}>
+          <ProgressBar
+            progress={usage}
+            color={overBudget ? colors.danger : usage > 0.8 ? colors.warning : colors.primary}
+            height={14}
+          />
+        </View>
+        <View style={styles.heroRow}>
+          <Text style={styles.heroMeta}>
+            Spent <Text style={styles.heroMetaStrong}>{formatCurrency(spent)}</Text>
+          </Text>
+          <Pressable onPress={() => navigation.navigate('BudgetSetup')} hitSlop={8}>
+            <Text style={styles.heroMeta}>
+              Budget{' '}
+              <Text style={[styles.heroMetaStrong, styles.budgetLink]}>
+                {monthlyBudget > 0 ? formatCurrency(monthlyBudget) : 'not set — tap to add'}
+              </Text>
+            </Text>
+          </Pressable>
+        </View>
+        <View style={styles.heroStats}>
+          <StatBox label="Cash (all-time)" value={formatCurrency(cash)} danger={cash < 0} />
+          <StatBox label="Withdrawn" value={formatCurrency(withdrawnThisMonth)} />
+          <StatBox label="Cash spent" value={formatCurrency(cashSpentThisMonth)} />
+        </View>
+        {cash < 0 ? (
+          <Text style={styles.cashWarn}>Cash spending is higher than recorded withdrawals.</Text>
+        ) : null}
+      </AnimatedCard>
+
+      <View style={styles.toolRow}>
+        {TOOL_ACTIONS.map((action) => (
+          <Pressable
+            key={action.key}
+            onPress={() => handleToolAction(action.key)}
+            disabled={action.key === 'Export' && exportBusy}
+            style={({ pressed }) => [
+              styles.toolButton,
+              pressed && styles.toolPressed,
+              action.key === 'Export' && exportBusy && styles.toolDisabled,
+            ]}
+          >
+            <Text style={styles.toolLabel}>
+              {action.key === 'Export' && exportBusy ? 'Exporting…' : action.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <AnimatedCard index={1} style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <SectionTitle style={styles.sectionTitleInline}>Top Categories</SectionTitle>
+          <Pressable onPress={() => navigation.navigate('Insights')}>
+            <Text style={styles.link}>See all</Text>
+          </Pressable>
+        </View>
+        {byCategory.length === 0 ? (
+          <Text style={styles.empty}>No spending in {getMonthLabel(selectedMonthKey)}.</Text>
+        ) : (
+          byCategory
+            .slice(0, 4)
+            .map(([name, amount]) => (
+              <CategoryBar key={name} name={name} amount={amount} max={maxCategory} />
+            ))
+        )}
+      </AnimatedCard>
+
+      <SectionTitle>Transactions in {getMonthLabel(selectedMonthKey)}</SectionTitle>
+    </>
+  );
+
+  const listEmpty = (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyEmoji}>🧾</Text>
+      <Text style={styles.emptyTitle}>No transactions in this period</Text>
+      <Text style={styles.emptyText}>
+        {viewingCurrentMonth
+          ? 'Tap + below to add an expense, or use Import.'
+          : `Nothing recorded for ${getMonthLabel(selectedMonthKey)}.`}
+      </Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
+      <FlatList
+        data={monthTransactions}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -123,134 +253,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
             titleColor={colors.subText}
           />
         }
-      >
-        <Text style={styles.greeting}>{greeting()} 👋</Text>
-
-        <MonthSwitcher
-          monthKey={selectedMonthKey}
-          transactionCount={monthTransactions.length}
-          onPrevious={() => shiftSelectedMonth(-1)}
-          onNext={() => shiftSelectedMonth(1)}
-          onGoToCurrent={goToCurrentMonth}
-          canGoNext={canGoNext}
-        />
-
-        {!viewingCurrentMonth ? (
-          <MonthPeriodBanner
-            message={`Showing data for ${getMonthLabel(selectedMonthKey)} only. Cash on hand stays all-time.`}
-          />
-        ) : null}
-
-        <AnimatedCard index={0} style={styles.heroCard}>
-          <Text style={styles.heroLabel}>
-            {overBudget ? `Over budget in ${periodLabel}` : `Remaining in ${periodLabel}`}
-          </Text>
-          <AnimatedNumber
-            value={Math.abs(budgetRemaining)}
-            format={(v) => formatCurrency(v)}
-            adjustsFontSizeToFit
-            numberOfLines={1}
-            style={[styles.heroAmount, { color: overBudget ? colors.danger : colors.success }]}
-          />
-          <View style={styles.heroProgress}>
-            <ProgressBar
-              progress={usage}
-              color={overBudget ? colors.danger : usage > 0.8 ? colors.warning : colors.primary}
-              height={14}
-            />
-          </View>
-          <View style={styles.heroRow}>
-            <Text style={styles.heroMeta}>
-              Spent <Text style={styles.heroMetaStrong}>{formatCurrency(spent)}</Text>
-            </Text>
-            <Pressable onPress={() => navigation.navigate('BudgetSetup')} hitSlop={8}>
-              <Text style={styles.heroMeta}>
-                Budget{' '}
-                <Text style={[styles.heroMetaStrong, styles.budgetLink]}>
-                  {monthlyBudget > 0 ? formatCurrency(monthlyBudget) : 'not set — tap to add'}
-                </Text>
-              </Text>
-            </Pressable>
-          </View>
-          <View style={styles.heroStats}>
-            <StatBox label="Cash (all-time)" value={formatCurrency(cash)} danger={cash < 0} />
-            <StatBox label="Withdrawn" value={formatCurrency(withdrawnThisMonth)} />
-            <StatBox label="Cash spent" value={formatCurrency(cashSpentThisMonth)} />
-          </View>
-          {cash < 0 ? (
-            <Text style={styles.cashWarn}>Cash spending is higher than recorded withdrawals.</Text>
-          ) : null}
-        </AnimatedCard>
-
-        <View style={styles.toolRow}>
-          {TOOL_ACTIONS.map((action) => (
-            <Pressable
-              key={action.key}
-              onPress={() => handleToolAction(action.key)}
-              disabled={action.key === 'Export' && exportBusy}
-              style={({ pressed }) => [
-                styles.toolButton,
-                pressed && styles.toolPressed,
-                action.key === 'Export' && exportBusy && styles.toolDisabled,
-              ]}
-            >
-              <Text style={styles.toolLabel}>
-                {action.key === 'Export' && exportBusy ? 'Exporting…' : action.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <AnimatedCard index={1} style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <SectionTitle style={styles.sectionTitleInline}>Top Categories</SectionTitle>
-            <Pressable onPress={() => navigation.navigate('Insights')}>
-              <Text style={styles.link}>See all</Text>
-            </Pressable>
-          </View>
-          {byCategory.length === 0 ? (
-            <Text style={styles.empty}>No spending in {getMonthLabel(selectedMonthKey)}.</Text>
-          ) : (
-            byCategory
-              .slice(0, 4)
-              .map(([name, amount]) => (
-                <CategoryBar key={name} name={name} amount={amount} max={maxCategory} />
-              ))
-          )}
-        </AnimatedCard>
-
-        <SectionTitle>Transactions in {getMonthLabel(selectedMonthKey)}</SectionTitle>
-
-        {monthTransactions.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🧾</Text>
-            <Text style={styles.emptyTitle}>No transactions in this period</Text>
-            <Text style={styles.emptyText}>
-              {viewingCurrentMonth
-                ? 'Tap + below to add an expense, or use Import.'
-                : `Nothing recorded for ${getMonthLabel(selectedMonthKey)}.`}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.txListWrap}>
-            <FlatList
-              data={monthTransactions}
-              keyExtractor={(item) => item.id}
-              nestedScrollEnabled
-              scrollEnabled={monthTransactions.length > 3}
-              showsVerticalScrollIndicator
-              style={styles.txList}
-              contentContainerStyle={styles.txListContent}
-              renderItem={({ item }) => (
-                <TransactionRow
-                  item={item}
-                  onLongPress={() => confirmDelete(item.id, item.merchant ?? item.category)}
-                />
-              )}
-            />
-          </View>
-        )}
-      </ScrollView>
+      />
 
       <Pressable
         onPress={() => navigation.navigate('AddExpense')}
@@ -273,7 +276,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     flex: 1,
   },
-  scrollContent: {
+  listContent: {
     padding: spacing.lg,
     paddingBottom: 100,
   },
@@ -369,19 +372,6 @@ const styles = StyleSheet.create({
   },
   empty: {
     color: colors.subText,
-  },
-  txListWrap: {
-    maxHeight: TX_LIST_MAX_HEIGHT,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  txList: {
-    flexGrow: 0,
-  },
-  txListContent: {
-    padding: spacing.sm,
   },
   emptyState: {
     alignItems: 'center',

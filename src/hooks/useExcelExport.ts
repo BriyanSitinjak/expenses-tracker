@@ -12,7 +12,7 @@ function guardEmpty(expenses: { length: number }): boolean {
   return false;
 }
 
-// Shared export flows for Excel reports and re-importable CSV backups.
+// Shared export flows for re-importable Excel (.xlsx) and CSV backups.
 export function useExcelExport() {
   const expenses = useBudgetStore((state) => state.expenses);
   const monthlyBudget = useBudgetStore((state) => state.monthlyBudget);

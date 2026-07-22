@@ -1,6 +1,7 @@
+import * as XLSX from 'xlsx';
 import { autoCategory, isWithdrawal, WITHDRAWAL_CATEGORY } from '../constants/categories';
 import { DraftExpense, ExpenseSource, PaymentMethod, TxType } from '../types';
-import { isBackupCsv } from './backup';
+import { isBackupCsv, isBackupHeaders } from './backup';
 import { parseFlexibleDate } from './date';
 
 // Minimal CSV parser that handles quoted fields and embedded commas.
@@ -189,79 +190,206 @@ export function parseBankCsv(text: string): ParseReport {
   return report;
 }
 
-function isTxType(value: string): value is TxType {
-  return value === 'expense' || value === 'withdrawal';
-}
-
-function isPaymentMethod(value: string): value is PaymentMethod {
-  return value === 'debit' || value === 'cash';
-}
-
-function isExpenseSource(value: string): value is ExpenseSource {
-  return value === 'manual' || value === 'import' || value === 'bank';
-}
-
-// Parses a CSV produced by exportTransactionsBackup (app backup format).
-export function parseBackupCsv(text: string): ParseReport {
-  const rows = parseCsv(text);
-  const report: ParseReport = {
+function emptyReport(format: ImportFormat): ParseReport {
+  return {
     drafts: [],
-    format: 'backup',
+    format,
     totalRows: 0,
     incomeSkipped: 0,
     invalidSkipped: 0,
     withdrawals: 0,
   };
+}
+
+function normalizeType(raw: string): TxType {
+  const value = raw.trim().toLowerCase();
+  if (value === 'withdrawal' || value === 'transfer' || value === 'atm') return 'withdrawal';
+  return 'expense';
+}
+
+function normalizeMethod(raw: string): PaymentMethod {
+  const value = raw.trim().toLowerCase();
+  if (value === 'cash') return 'cash';
+  return 'debit';
+}
+
+function normalizeSource(raw: string): ExpenseSource {
+  const value = raw.trim().toLowerCase();
+  if (value === 'manual' || value === 'import' || value === 'bank') return value;
+  return 'import';
+}
+
+function cellLookup(headers: string[], ...names: string[]): number {
+  return headers.findIndex((header) => names.includes(header));
+}
+
+function rowValue(row: Record<string, unknown>, ...names: string[]): string {
+  const entries = Object.entries(row);
+  for (const name of names) {
+    const match = entries.find(([key]) => key.trim().toLowerCase() === name);
+    if (match) return String(match[1] ?? '').trim();
+  }
+  return '';
+}
+
+function pushBackupDraft(
+  report: ParseReport,
+  fields: {
+    dateRaw: string;
+    amountRaw: string;
+    category: string;
+    subcategory?: string;
+    merchant?: string;
+    note?: string;
+    typeRaw: string;
+    methodRaw: string;
+    sourceRaw: string;
+  }
+) {
+  report.totalRows += 1;
+
+  const date = parseFlexibleDate(fields.dateRaw) ?? new Date(fields.dateRaw);
+  const amount = parseAmount(fields.amountRaw);
+  const category = fields.category.trim();
+
+  if (Number.isNaN(date.getTime()) || Number.isNaN(amount) || amount <= 0 || !category) {
+    report.invalidSkipped += 1;
+    return;
+  }
+
+  const type = normalizeType(fields.typeRaw || 'expense');
+  const method = normalizeMethod(fields.methodRaw || 'debit');
+  const source = normalizeSource(fields.sourceRaw || 'import');
+  if (type === 'withdrawal') report.withdrawals += 1;
+
+  report.drafts.push({
+    date: date.toISOString(),
+    amount,
+    category,
+    subcategory: fields.subcategory?.trim() || undefined,
+    merchant: fields.merchant?.trim() || undefined,
+    note: fields.note?.trim() || undefined,
+    source,
+    method,
+    type,
+  });
+}
+
+// Parses a matrix (header row + data) in the app backup column format.
+export function parseBackupMatrix(rows: string[][]): ParseReport {
+  const report = emptyReport('backup');
   if (rows.length === 0) return report;
 
   const headers = rows[0].map((cell) => cell.trim().toLowerCase());
-  const col = (name: string) => headers.indexOf(name);
-
-  const dateCol = col('date');
-  const amountCol = col('amount');
-  const categoryCol = col('category');
-  const subcategoryCol = col('subcategory');
-  const merchantCol = col('merchant');
-  const typeCol = col('type');
-  const methodCol = col('method');
-  const sourceCol = col('source');
-  const noteCol = col('note');
+  const dateCol = cellLookup(headers, 'date');
+  const amountCol = cellLookup(headers, 'amount', 'amount (idr)');
+  const categoryCol = cellLookup(headers, 'category');
+  const subcategoryCol = cellLookup(headers, 'subcategory');
+  const merchantCol = cellLookup(headers, 'merchant');
+  const typeCol = cellLookup(headers, 'type');
+  const methodCol = cellLookup(headers, 'method');
+  const sourceCol = cellLookup(headers, 'source');
+  const noteCol = cellLookup(headers, 'note');
 
   for (const cells of rows.slice(1)) {
-    report.totalRows += 1;
-
-    const dateRaw = cells[dateCol]?.trim() ?? '';
-    const date = new Date(dateRaw);
-    const amount = parseAmount(cells[amountCol] ?? '');
-    const category = cells[categoryCol]?.trim() ?? '';
-    const typeRaw = (cells[typeCol]?.trim() ?? 'expense').toLowerCase();
-    const methodRaw = (cells[methodCol]?.trim() ?? 'debit').toLowerCase();
-    const sourceRaw = (cells[sourceCol]?.trim() ?? 'import').toLowerCase();
-
-    if (Number.isNaN(date.getTime()) || Number.isNaN(amount) || amount <= 0 || !category) {
-      report.invalidSkipped += 1;
-      continue;
-    }
-
-    const type: TxType = isTxType(typeRaw) ? typeRaw : 'expense';
-    const method: PaymentMethod = isPaymentMethod(methodRaw) ? methodRaw : 'debit';
-    const source: ExpenseSource = isExpenseSource(sourceRaw) ? sourceRaw : 'import';
-    if (type === 'withdrawal') report.withdrawals += 1;
-
-    report.drafts.push({
-      date: date.toISOString(),
-      amount,
-      category,
-      subcategory: cells[subcategoryCol]?.trim() || undefined,
-      merchant: cells[merchantCol]?.trim() || undefined,
-      note: cells[noteCol]?.trim() || undefined,
-      source,
-      method,
-      type,
+    pushBackupDraft(report, {
+      dateRaw: cells[dateCol] ?? '',
+      amountRaw: cells[amountCol] ?? '',
+      category: cells[categoryCol] ?? '',
+      subcategory: cells[subcategoryCol],
+      merchant: cells[merchantCol],
+      note: cells[noteCol],
+      typeRaw: cells[typeCol] ?? 'expense',
+      methodRaw: cells[methodCol] ?? 'debit',
+      sourceRaw: cells[sourceCol] ?? 'import',
     });
   }
 
   return report;
+}
+
+// Parses a CSV produced by exportTransactionsBackup (app backup format).
+export function parseBackupCsv(text: string): ParseReport {
+  return parseBackupMatrix(parseCsv(text));
+}
+
+// Parses the human-readable "Transactions" sheet from Excel report exports.
+function parseExcelTransactionsSheet(rows: Record<string, unknown>[]): ParseReport {
+  const report = emptyReport('backup');
+
+  for (const row of rows) {
+    const datePart = rowValue(row, 'date');
+    const timePart = rowValue(row, 'time');
+    const dateRaw = timePart ? `${datePart} ${timePart}` : datePart;
+
+    pushBackupDraft(report, {
+      dateRaw,
+      amountRaw: rowValue(row, 'amount (idr)', 'amount'),
+      category: rowValue(row, 'category'),
+      subcategory: rowValue(row, 'subcategory'),
+      merchant: rowValue(row, 'merchant'),
+      note: rowValue(row, 'note'),
+      typeRaw: rowValue(row, 'type') || 'expense',
+      methodRaw: rowValue(row, 'method') || 'debit',
+      sourceRaw: rowValue(row, 'source') || 'import',
+    });
+  }
+
+  return report;
+}
+
+function sheetToMatrix(sheet: XLSX.WorkSheet): string[][] {
+  const rows = XLSX.utils.sheet_to_json<(string | number | boolean | null | undefined)[]>(sheet, {
+    header: 1,
+    defval: '',
+    raw: false,
+  });
+  return rows.map((row) => row.map((cell) => String(cell ?? '').trim()));
+}
+
+function sheetLooksLikeBackup(sheet: XLSX.WorkSheet): boolean {
+  const matrix = sheetToMatrix(sheet);
+  if (matrix.length === 0) return false;
+  return isBackupHeaders(matrix[0]);
+}
+
+// Parses an Excel workbook (.xlsx/.xls) exported by the app or a simple bank sheet.
+export function parseImportExcel(data: ArrayBuffer | string, dataType: 'array' | 'base64'): ParseReport {
+  const workbook = XLSX.read(data, { type: dataType, cellDates: true });
+  const names = workbook.SheetNames;
+
+  const backupName = names.find((name) => name.trim().toLowerCase() === 'backup');
+  if (backupName) {
+    const matrix = sheetToMatrix(workbook.Sheets[backupName]);
+    const report = parseBackupMatrix(matrix);
+    if (report.drafts.length > 0 || report.totalRows > 0) return report;
+  }
+
+  const namedBackup = names.find((name) => sheetLooksLikeBackup(workbook.Sheets[name]));
+  if (namedBackup) {
+    return parseBackupMatrix(sheetToMatrix(workbook.Sheets[namedBackup]));
+  }
+
+  const txName = names.find((name) => name.trim().toLowerCase() === 'transactions');
+  if (txName) {
+    const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[txName], {
+      defval: '',
+      raw: false,
+    });
+    const report = parseExcelTransactionsSheet(json);
+    if (report.drafts.length > 0) return report;
+  }
+
+  // Fall back to treating the first sheet as a bank-style CSV.
+  const first = names[0];
+  if (!first) return emptyReport('bank');
+  const csv = XLSX.utils.sheet_to_csv(workbook.Sheets[first]);
+  return parseBankCsv(csv);
+}
+
+export function isExcelFileName(name: string): boolean {
+  const lower = name.trim().toLowerCase();
+  return lower.endsWith('.xlsx') || lower.endsWith('.xls');
 }
 
 // Auto-detects bank statement vs app backup CSV and parses accordingly.

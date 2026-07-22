@@ -5,7 +5,6 @@ import {
   Alert,
   FlatList,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -18,11 +17,26 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { DraftExpense } from '../types';
 import { formatCurrency } from '../utils/format';
-import { parseImportFile, ParseReport, sampleBankStatementCsv } from '../utils/import';
+import {
+  isExcelFileName,
+  parseImportExcel,
+  parseImportFile,
+  ParseReport,
+  sampleBankStatementCsv,
+} from '../utils/import';
 
 type ImportScreenProps = NativeStackScreenProps<RootStackParamList, 'Import'>;
 
-// Reads a picked file's text content across web and native.
+const PICKER_TYPES = [
+  'text/csv',
+  'text/comma-separated-values',
+  'application/csv',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '*/*',
+];
+
+// Reads a picked text file across web and native.
 async function readFileText(uri: string): Promise<string> {
   if (Platform.OS === 'web') {
     const response = await fetch(uri);
@@ -32,23 +46,38 @@ async function readFileText(uri: string): Promise<string> {
   return FileSystem.readAsStringAsync(uri);
 }
 
-// Bank statement import: pick a CSV (or try a demo) then review and import.
+// Reads a picked Excel file as base64 (native) or ArrayBuffer (web).
+async function readExcelPayload(
+  uri: string
+): Promise<{ data: ArrayBuffer | string; dataType: 'array' | 'base64' }> {
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    const data = await response.arrayBuffer();
+    return { data, dataType: 'array' };
+  }
+  const FileSystem = await import('expo-file-system/legacy');
+  const data = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  return { data, dataType: 'base64' };
+}
+
+// Bank statement / backup import: pick CSV or Excel, review, then import.
 export function ImportScreen({ navigation }: ImportScreenProps) {
   const { importExpenses } = useBudgetStore();
   const [report, setReport] = useState<ParseReport | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function ingest(text: string, name: string) {
-    const result = parseImportFile(text);
+  function ingest(result: ParseReport, name: string) {
     setReport(result);
     setFileName(name);
     if (result.drafts.length === 0) {
       Alert.alert(
         'No transactions found',
         result.format === 'backup'
-          ? 'This backup file has no valid rows. Export a new backup from Insights and try again.'
-          : 'We could not detect outgoing transactions. Use an app backup CSV, or a bank file with Date, Description and Amount (or Debit) columns.'
+          ? 'This backup file has no valid rows. Export Excel or CSV from the app and try again.'
+          : 'We could not detect outgoing transactions. Use an app Excel/CSV backup, or a bank file with Date, Description and Amount (or Debit) columns.'
       );
     }
   }
@@ -58,13 +87,22 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
       setLoading(true);
       const DocumentPicker = await import('expo-document-picker');
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['text/csv', 'text/comma-separated-values', 'application/vnd.ms-excel', '*/*'],
+        type: PICKER_TYPES,
         copyToCacheDirectory: true,
       });
       if (result.canceled || !result.assets?.[0]) return;
+
       const asset = result.assets[0];
+      const name = asset.name ?? 'statement.csv';
+
+      if (isExcelFileName(name) || asset.mimeType?.includes('spreadsheet') || asset.mimeType?.includes('excel')) {
+        const { data, dataType } = await readExcelPayload(asset.uri);
+        ingest(parseImportExcel(data, dataType), name);
+        return;
+      }
+
       const text = await readFileText(asset.uri);
-      ingest(text, asset.name ?? 'statement.csv');
+      ingest(parseImportFile(text), name);
     } catch (error) {
       Alert.alert('Could not read file', String(error instanceof Error ? error.message : error));
     } finally {
@@ -73,7 +111,7 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
   }
 
   function handleDemo() {
-    ingest(sampleBankStatementCsv(), 'demo-statement.csv');
+    ingest(parseImportFile(sampleBankStatementCsv()), 'demo-statement.csv');
   }
 
   function handleConfirmImport() {
@@ -97,14 +135,14 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
       <Card style={styles.infoCard}>
         <Text style={styles.infoTitle}>🏦 Import transactions</Text>
         <Text style={styles.infoText}>
-          Import a bank statement CSV, or re-import an app backup CSV exported from Insights.
-          Bank files need Date, Description and Amount (or Debit) columns. Backup files keep
-          categories, payment method, and notes.
+          Import an Excel (.xlsx) or CSV backup from this app, or a bank statement CSV. App backups
+          keep categories, payment method, and notes. Bank files need Date, Description and Amount
+          (or Debit) columns.
         </Text>
         <View style={styles.buttonRow}>
           <Button
             icon="📁"
-            label={loading ? 'Reading…' : 'Pick statement'}
+            label={loading ? 'Reading…' : 'Pick file'}
             onPress={handlePickFile}
             style={styles.flexBtn}
           />

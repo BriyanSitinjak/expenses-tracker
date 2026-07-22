@@ -107,19 +107,20 @@ export function InsightsScreen(_: InsightsScreenProps) {
 
       <SectionTitle>Export data</SectionTitle>
       <Text style={styles.exportHint}>
-        Excel is best for viewing reports. CSV backup keeps every field and can be imported again.
+        Export Excel or CSV, then re-import either file from Import. Excel also includes a readable
+        Summary and Transactions report.
       </Text>
       <View style={styles.exportWrap}>
         <Button
           icon="📊"
-          label={exporting ? 'Exporting…' : 'Export all to Excel'}
+          label={exporting ? 'Exporting…' : 'Export Excel (.xlsx)'}
           onPress={exportExpenses}
           disabled={exporting || exportingBackup}
         />
         <Button
           icon="💾"
           variant="secondary"
-          label={exportingBackup ? 'Exporting…' : 'Export backup (CSV)'}
+          label={exportingBackup ? 'Exporting…' : 'Export CSV backup'}
           onPress={exportBackup}
           disabled={exporting || exportingBackup}
           style={styles.exportBtn}
