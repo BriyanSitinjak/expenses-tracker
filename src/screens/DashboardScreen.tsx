@@ -20,6 +20,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { SectionTitle } from '../components/SectionTitle';
 import { StatBox } from '../components/StatBox';
 import { TransactionRow } from '../components/TransactionRow';
+import { TransferStatusModal } from '../components/TransferStatusModal';
 import { colors, radius, shadow, spacing } from '../constants/theme';
 import { useExcelExport } from '../hooks/useExcelExport';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -59,7 +60,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
     deleteExpense,
   } = useBudgetStore();
 
-  const { exporting, exportingBackup, exportExpenses, exportBackup } = useExcelExport();
+  const { exporting, exportingBackup, exportExpenses, exportBackup, progress } = useExcelExport();
   const [refreshing, setRefreshing] = useState(false);
 
   const viewingCurrentMonth = isCurrentMonth(selectedMonthKey);
@@ -267,6 +268,11 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         <Text style={styles.fabIcon}>+</Text>
         <Text style={styles.fabLabel}>Add expense</Text>
       </Pressable>
+      <TransferStatusModal
+        visible={progress != null}
+        title={progress?.title ?? ''}
+        message={progress?.message ?? ''}
+      />
     </View>
   );
 }

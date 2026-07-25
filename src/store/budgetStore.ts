@@ -269,14 +269,19 @@ export const useBudgetStore = create<BudgetStore>()(
         if (accepted.length > 0) {
           set((state) => {
             let categories = state.categories;
+            let subcategories = state.subcategories;
             for (const item of accepted) {
               categories = withCategory(categories, item.category);
+              if (item.subcategory) {
+                subcategories = withSubcategory(subcategories, item.category, item.subcategory);
+              }
             }
             return {
               expenses: [...accepted, ...state.expenses].sort(
                 (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
               ),
               categories,
+              subcategories,
             };
           });
         }

@@ -16,15 +16,12 @@ type ExportResult = {
   shared: boolean;
 };
 
-// Converts a Uint8Array workbook into base64 without blowing the call stack.
-function uint8ToBase64(bytes: Uint8Array): string {
-  const chunkSize = 0x8000;
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const slice = bytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode(...slice);
-  }
-  return btoa(binary);
+export type ExcelExportProgress = (message: string) => void;
+
+// Keeps spreadsheet cells as plain text (drops null bytes that can break writers).
+function cellText(value: unknown): string {
+  if (value == null) return '';
+  return String(value).replace(/\u0000/g, '');
 }
 
 function safeLocaleDate(iso: string): string {
@@ -42,8 +39,11 @@ function safeLocaleTime(iso: string): string {
 // Builds a workbook from expenses and exports it as .xlsx.
 export async function exportExpensesToExcel(
   expenses: Expense[],
-  monthlyBudget: number
+  monthlyBudget: number,
+  onProgress?: ExcelExportProgress
 ): Promise<ExportResult> {
+  onProgress?.('Building spreadsheet…');
+
   const sorted = [...expenses].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
@@ -51,14 +51,14 @@ export async function exportExpensesToExcel(
   const transactionRows = sorted.map((item) => ({
     Date: safeLocaleDate(item.date),
     Time: safeLocaleTime(item.date),
-    Merchant: item.merchant ?? '',
-    Category: item.category,
-    Subcategory: item.subcategory ?? '',
+    Merchant: cellText(item.merchant),
+    Category: cellText(item.category),
+    Subcategory: cellText(item.subcategory),
     Type: item.type === 'withdrawal' ? 'Withdrawal' : 'Expense',
     Method: item.method === 'cash' ? 'Cash' : 'Debit',
-    'Amount (IDR)': Math.round(item.amount),
-    Source: item.source,
-    Note: item.note ?? '',
+    'Amount (IDR)': Math.round(Number(item.amount) || 0),
+    Source: cellText(item.source),
+    Note: cellText(item.note),
   }));
 
   const stats = paymentStats(expenses);
@@ -81,7 +81,7 @@ export async function exportExpensesToExcel(
     ['Spending by category', 'Amount (IDR)'],
     ...Object.entries(byCategory)
       .sort((a, b) => b[1] - a[1])
-      .map(([name, amount]) => [name, Math.round(amount)]),
+      .map(([name, amount]) => [cellText(name), Math.round(amount)]),
     [],
     ['Spending by month', 'Amount (IDR)'],
     ...Object.entries(byMonth)
@@ -131,15 +131,15 @@ export async function exportExpensesToExcel(
   const backupAoa: (string | number)[][] = [
     [...BACKUP_CSV_HEADERS],
     ...backupRows.map((row) => [
-      row.date,
+      cellText(row.date),
       row.amount,
-      row.category,
-      row.subcategory,
-      row.merchant,
-      row.type,
-      row.method,
-      row.source,
-      row.note,
+      cellText(row.category),
+      cellText(row.subcategory),
+      cellText(row.merchant),
+      cellText(row.type),
+      cellText(row.method),
+      cellText(row.source),
+      cellText(row.note),
     ]),
   ];
   if (backupRows.length === 0) {
@@ -170,12 +170,17 @@ export async function exportExpensesToExcel(
   const fileName = `expenses-${new Date().toISOString().slice(0, 10)}.xlsx`;
 
   if (Platform.OS === 'web') {
+    onProgress?.('Downloading Excel file…');
     XLSX.writeFile(workbook, fileName);
     return { shared: true };
   }
 
-  const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as Uint8Array;
-  const base64 = uint8ToBase64(bytes);
+  // Use SheetJS base64 output directly — avoids Hermes crashing on
+  // String.fromCharCode(...hugeChunk) when converting a Uint8Array.
+  onProgress?.('Encoding Excel file…');
+  const base64 = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' }) as string;
+
+  onProgress?.('Saving file…');
   const { FileSystem, Sharing } = await getNativeFsModules();
 
   const directory = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
@@ -198,6 +203,7 @@ export async function exportExpensesToExcel(
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
+    onProgress?.('Opening share sheet…');
     await Sharing.shareAsync(fileUri, {
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       dialogTitle: 'Export expenses',

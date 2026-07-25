@@ -12,6 +12,7 @@ import {
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { TransactionRow } from '../components/TransactionRow';
+import { TransferStatusModal } from '../components/TransferStatusModal';
 import { colors, spacing } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
@@ -24,6 +25,7 @@ import {
   ParseReport,
   sampleBankStatementCsv,
 } from '../utils/import';
+import { describeTransferError, yieldToUI } from '../utils/transfer';
 
 type ImportScreenProps = NativeStackScreenProps<RootStackParamList, 'Import'>;
 
@@ -35,6 +37,11 @@ const PICKER_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   '*/*',
 ];
+
+type ProgressState = {
+  title: string;
+  message: string;
+} | null;
 
 // Reads a picked text file across web and native.
 async function readFileText(uri: string): Promise<string> {
@@ -68,6 +75,7 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
   const [report, setReport] = useState<ParseReport | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<ProgressState>(null);
 
   function ingest(result: ParseReport, name: string) {
     setReport(result);
@@ -85,28 +93,54 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
   async function handlePickFile() {
     try {
       setLoading(true);
+      setProgress({ title: 'Importing', message: 'Opening file picker…' });
+      await yieldToUI();
+
       const DocumentPicker = await import('expo-document-picker');
       const result = await DocumentPicker.getDocumentAsync({
         type: PICKER_TYPES,
         copyToCacheDirectory: true,
       });
-      if (result.canceled || !result.assets?.[0]) return;
-
-      const asset = result.assets[0];
-      const name = asset.name ?? 'statement.csv';
-
-      if (isExcelFileName(name) || asset.mimeType?.includes('spreadsheet') || asset.mimeType?.includes('excel')) {
-        const { data, dataType } = await readExcelPayload(asset.uri);
-        ingest(parseImportExcel(data, dataType), name);
+      if (result.canceled || !result.assets?.[0]) {
+        setProgress(null);
         return;
       }
 
-      const text = await readFileText(asset.uri);
-      ingest(parseImportFile(text), name);
+      const asset = result.assets[0];
+      const name = asset.name ?? 'statement.csv';
+      const isExcel =
+        isExcelFileName(name) ||
+        asset.mimeType?.includes('spreadsheet') ||
+        asset.mimeType?.includes('excel');
+
+      setProgress({
+        title: 'Reading file',
+        message: isExcel ? `Parsing Excel: ${name}` : `Parsing CSV: ${name}`,
+      });
+      await yieldToUI();
+
+      if (isExcel) {
+        const { data, dataType } = await readExcelPayload(asset.uri);
+        setProgress({ title: 'Reading file', message: 'Detecting transactions…' });
+        await yieldToUI();
+        ingest(parseImportExcel(data, dataType), name);
+      } else {
+        const text = await readFileText(asset.uri);
+        setProgress({ title: 'Reading file', message: 'Detecting transactions…' });
+        await yieldToUI();
+        ingest(parseImportFile(text), name);
+      }
     } catch (error) {
-      Alert.alert('Could not read file', String(error instanceof Error ? error.message : error));
+      Alert.alert(
+        'Import failed',
+        describeTransferError(
+          error,
+          'Could not read or parse that file. Try exporting a fresh Excel/CSV backup from this app.'
+        )
+      );
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   }
 
@@ -114,15 +148,32 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
     ingest(parseImportFile(sampleBankStatementCsv()), 'demo-statement.csv');
   }
 
-  function handleConfirmImport() {
+  async function handleConfirmImport() {
     if (!report || report.drafts.length === 0) return;
-    const { added, skipped } = importExpenses(report.drafts);
-    Alert.alert(
-      'Import complete',
-      `Added ${added} transaction${added === 1 ? '' : 's'}.` +
-        (skipped > 0 ? `\nSkipped ${skipped} duplicate${skipped === 1 ? '' : 's'}.` : ''),
-      [{ text: 'OK', onPress: () => navigation.navigate('Dashboard') }]
-    );
+    try {
+      setProgress({
+        title: 'Saving import',
+        message: `Adding ${report.drafts.length} transaction${report.drafts.length === 1 ? '' : 's'}…`,
+      });
+      await yieldToUI();
+      const { added, skipped } = importExpenses(report.drafts);
+      setProgress(null);
+      Alert.alert(
+        'Import complete',
+        `Added ${added} transaction${added === 1 ? '' : 's'}.` +
+          (skipped > 0 ? `\nSkipped ${skipped} duplicate${skipped === 1 ? '' : 's'}.` : ''),
+        [{ text: 'OK', onPress: () => navigation.navigate('Dashboard') }]
+      );
+    } catch (error) {
+      setProgress(null);
+      Alert.alert(
+        'Import failed',
+        describeTransferError(
+          error,
+          'Transactions were read from the file, but saving them into the app failed. Please try again.'
+        )
+      );
+    }
   }
 
   const drafts = report?.drafts ?? [];
@@ -145,6 +196,7 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
             label={loading ? 'Reading…' : 'Pick file'}
             onPress={handlePickFile}
             style={styles.flexBtn}
+            disabled={loading || progress != null}
           />
           <Button
             icon="✨"
@@ -152,6 +204,7 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
             label="Try demo"
             onPress={handleDemo}
             style={styles.flexBtn}
+            disabled={loading || progress != null}
           />
         </View>
       </Card>
@@ -181,7 +234,7 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
 
   return (
     <View style={styles.container}>
-      {loading && drafts.length === 0 ? (
+      {loading && drafts.length === 0 && progress == null ? (
         <View style={styles.loader}>
           <ActivityIndicator color={colors.primary} />
         </View>
@@ -204,9 +257,16 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
             icon="⬇️"
             label={`Import ${drafts.length} transaction${drafts.length === 1 ? '' : 's'}`}
             onPress={handleConfirmImport}
+            disabled={progress != null}
           />
         </View>
       ) : null}
+
+      <TransferStatusModal
+        visible={progress != null}
+        title={progress?.title ?? ''}
+        message={progress?.message ?? ''}
+      />
     </View>
   );
 }

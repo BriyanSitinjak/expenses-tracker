@@ -8,6 +8,7 @@ import { LevelBanner } from '../components/LevelBanner';
 import { ProgressBar } from '../components/ProgressBar';
 import { SectionTitle } from '../components/SectionTitle';
 import { StatBox } from '../components/StatBox';
+import { TransferStatusModal } from '../components/TransferStatusModal';
 import { colors, radius, spacing } from '../constants/theme';
 import { useExcelExport } from '../hooks/useExcelExport';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -21,7 +22,7 @@ type InsightsScreenProps = NativeStackScreenProps<RootStackParamList, 'Insights'
 // Insights screen: achievements, lifetime analytics, and Excel export.
 export function InsightsScreen(_: InsightsScreenProps) {
   const { expenses, monthlyBudget, cashOnHand } = useBudgetStore();
-  const { exporting, exportingBackup, exportExpenses, exportBackup } = useExcelExport();
+  const { exporting, exportingBackup, exportExpenses, exportBackup, progress } = useExcelExport();
 
   const onlyExpenseRows = useMemo(() => onlyExpenses(expenses), [expenses]);
 
@@ -40,7 +41,8 @@ export function InsightsScreen(_: InsightsScreenProps) {
   const maxCategory = byCategory.length > 0 ? byCategory[0][1] : 0;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <AnimatedCard index={0} style={styles.bannerCard}>
         <LevelBanner game={game} />
       </AnimatedCard>
@@ -127,6 +129,12 @@ export function InsightsScreen(_: InsightsScreenProps) {
         />
       </View>
     </ScrollView>
+      <TransferStatusModal
+        visible={progress != null}
+        title={progress?.title ?? ''}
+        message={progress?.message ?? ''}
+      />
+    </>
   );
 }
 

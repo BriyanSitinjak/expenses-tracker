@@ -91,11 +91,16 @@ async function getNativeFsModules() {
 }
 
 // Exports transactions as a shareable CSV backup file.
-export async function exportTransactionsBackup(expenses: Expense[]): Promise<ExportResult> {
+export async function exportTransactionsBackup(
+  expenses: Expense[],
+  onProgress?: (message: string) => void
+): Promise<ExportResult> {
+  onProgress?.('Building CSV backup…');
   const csv = buildBackupCsv(expenses);
   const fileName = `expenses-backup-${new Date().toISOString().slice(0, 10)}.csv`;
 
   if (Platform.OS === 'web') {
+    onProgress?.('Downloading CSV file…');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -106,14 +111,20 @@ export async function exportTransactionsBackup(expenses: Expense[]): Promise<Exp
     return { shared: true };
   }
 
+  onProgress?.('Saving file…');
   const { FileSystem, Sharing } = await getNativeFsModules();
-  const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+  const directory = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+  if (!directory) {
+    throw new Error('No writable directory available on this device.');
+  }
+  const fileUri = `${directory}${fileName}`;
   await FileSystem.writeAsStringAsync(fileUri, csv, {
     encoding: FileSystem.EncodingType.UTF8,
   });
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
+    onProgress?.('Opening share sheet…');
     await Sharing.shareAsync(fileUri, {
       mimeType: 'text/csv',
       dialogTitle: 'Export backup',
