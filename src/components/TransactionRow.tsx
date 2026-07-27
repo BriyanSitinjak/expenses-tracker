@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { colorForCategory, colors, radius, spacing } from '../constants/theme';
+import { colorForCategory, colorForSubcategory, colors, radius, spacing } from '../constants/theme';
 import { Expense, PaymentMethod } from '../types';
 import { formatCurrency } from '../utils/format';
 
@@ -44,7 +44,10 @@ function methodStyles(method: PaymentMethod, isWithdrawal: boolean) {
 // Shared transaction list row for dashboard and import preview.
 export function TransactionRow({ item, onLongPress, style, compact }: TransactionRowProps) {
   const isWithdrawal = item.type === 'withdrawal';
-  const iconColor = isWithdrawal ? colors.muted : colorForCategory(item.category);
+  const categoryColor = isWithdrawal ? colors.muted : colorForCategory(item.category);
+  const subcategoryColor = item.subcategory
+    ? colorForSubcategory(item.subcategory, item.category)
+    : null;
   const payment = methodStyles(item.method, isWithdrawal);
 
   const content = (
@@ -52,7 +55,7 @@ export function TransactionRow({ item, onLongPress, style, compact }: Transactio
       <View
         style={[
           compact ? styles.dot : styles.icon,
-          { backgroundColor: iconColor },
+          { backgroundColor: categoryColor },
         ]}
       >
         {!compact ? (
@@ -68,16 +71,31 @@ export function TransactionRow({ item, onLongPress, style, compact }: Transactio
             <Text style={styles.meta} numberOfLines={1}>
               {isWithdrawal
                 ? 'Transfer → Cash'
-                : `${item.category} · ${item.method === 'cash' ? '💵' : '💳'}`}
+                : `${item.category}${item.subcategory ? ` · ${item.subcategory}` : ''} · ${
+                    item.method === 'cash' ? '💵' : '💳'
+                  }`}
               {' · '}
               {new Date(item.date).toLocaleDateString()}
             </Text>
           </>
         ) : (
           <>
-            <Text style={styles.category} numberOfLines={1}>
-              {item.category}
-            </Text>
+            <View style={styles.badgeRow}>
+              <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '22' }]}>
+                <Text style={[styles.categoryBadgeText, { color: categoryColor }]}>
+                  {item.category}
+                </Text>
+              </View>
+              {item.subcategory && subcategoryColor ? (
+                <View
+                  style={[styles.subcategoryBadge, { backgroundColor: subcategoryColor + '22' }]}
+                >
+                  <Text style={[styles.subcategoryBadgeText, { color: subcategoryColor }]}>
+                    {item.subcategory}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
             {item.merchant ? (
               <Text style={styles.detail} numberOfLines={1}>
                 {item.merchant}
@@ -155,7 +173,7 @@ const styles = StyleSheet.create({
     width: 40,
   },
   iconText: {
-    color: '#0B1020',
+    color: colors.onAccent,
     fontSize: 18,
     fontWeight: '900',
   },
@@ -168,10 +186,29 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  category: {
-    color: colors.text,
-    fontSize: 15,
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginBottom: 2,
+  },
+  categoryBadge: {
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  categoryBadgeText: {
+    fontSize: 12,
     fontWeight: '800',
+  },
+  subcategoryBadge: {
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  subcategoryBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   detail: {
     color: colors.text,

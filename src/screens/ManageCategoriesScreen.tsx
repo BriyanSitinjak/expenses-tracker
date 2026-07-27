@@ -13,7 +13,7 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { InlineAddRow } from '../components/InlineAddRow';
 import { FALLBACK_CATEGORY } from '../constants/categories';
-import { colorForCategory, colors, radius, spacing } from '../constants/theme';
+import { colorForCategory, colorForSubcategory, colors, radius, spacing } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 
@@ -180,18 +180,28 @@ export function ManageCategoriesScreen(_: ManageCategoriesScreenProps) {
             </View>
 
             <View style={styles.subWrap}>
-              {subs.map((sub) => (
-                <View key={sub} style={styles.subChip}>
-                  <Text style={styles.subText}>{sub}</Text>
-                  <Pressable
-                    onPress={() => deleteSubcategory(name, sub)}
-                    hitSlop={8}
-                    style={styles.subRemove}
+              {subs.map((sub) => {
+                const subColor = colorForSubcategory(sub, name);
+                return (
+                  <View
+                    key={sub}
+                    style={[
+                      styles.subChip,
+                      { backgroundColor: subColor + '18', borderColor: subColor + '66' },
+                    ]}
                   >
-                    <Text style={styles.subRemoveText}>×</Text>
-                  </Pressable>
-                </View>
-              ))}
+                    <View style={[styles.subDot, { backgroundColor: subColor }]} />
+                    <Text style={[styles.subText, { color: subColor }]}>{sub}</Text>
+                    <Pressable
+                      onPress={() => deleteSubcategory(name, sub)}
+                      hitSlop={8}
+                      style={styles.subRemove}
+                    >
+                      <Text style={styles.subRemoveText}>×</Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
               <Pressable
                 onPress={() => {
                   setAddingSubFor(addingSubFor === name ? null : name);
@@ -312,8 +322,14 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
     paddingVertical: spacing.xs,
   },
+  subDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
   subText: {
     color: colors.subText,
+    fontWeight: '700',
   },
   subRemove: {
     width: 18,

@@ -16,7 +16,7 @@ import { InlineAddRow } from '../components/InlineAddRow';
 import { MonthPeriodBanner } from '../components/MonthPeriodBanner';
 import { TextInputField } from '../components/TextInputField';
 import { WITHDRAWAL_CATEGORY } from '../constants/categories';
-import { colorForCategory, colors, radius, spacing } from '../constants/theme';
+import { colorForCategory, colorForSubcategory, colors, radius, spacing } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { PaymentMethod } from '../types';
@@ -248,13 +248,18 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
             <View style={styles.chipWrap}>
               {subOptions.map((item) => {
                 const active = item === subcategory;
+                const color = colorForSubcategory(item, category);
                 return (
                   <Pressable
                     key={item}
                     onPress={() => setSubcategory(active ? undefined : item)}
-                    style={[styles.subChip, active && styles.subChipActive]}
+                    style={[
+                      styles.subChip,
+                      active && { backgroundColor: color + '22', borderColor: color },
+                    ]}
                   >
-                    <Text style={[styles.subChipText, active && styles.subChipTextActive]}>
+                    <View style={[styles.chipDot, { backgroundColor: color }]} />
+                    <Text style={[styles.subChipText, active && { color, fontWeight: '800' }]}>
                       {item}
                     </Text>
                   </Pressable>
@@ -389,6 +394,9 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   subChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.bgElevated,
     borderColor: colors.border,
     borderRadius: radius.pill,
@@ -396,16 +404,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  subChipActive: {
-    backgroundColor: colors.accent + '22',
-    borderColor: colors.accent,
-  },
   subChipText: {
     color: colors.subText,
-  },
-  subChipTextActive: {
-    color: colors.accent,
-    fontWeight: '800',
   },
   addChip: {
     backgroundColor: 'transparent',
