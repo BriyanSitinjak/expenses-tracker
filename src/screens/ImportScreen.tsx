@@ -162,7 +162,16 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
         'Import complete',
         `Added ${added} transaction${added === 1 ? '' : 's'}.` +
           (skipped > 0 ? `\nSkipped ${skipped} duplicate${skipped === 1 ? '' : 's'}.` : ''),
-        [{ text: 'OK', onPress: () => navigation.navigate('Dashboard') }]
+        [
+          {
+            text: 'OK',
+            onPress: () =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Dashboard' }],
+              }),
+          },
+        ]
       );
     } catch (error) {
       setProgress(null);

@@ -32,11 +32,12 @@ import { getMonthKey, getMonthLabel, isCurrentMonth } from '../utils/date';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
-function greeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+function todayLabel(): string {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 export function DashboardScreen({ navigation }: DashboardScreenProps) {
@@ -114,7 +115,10 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   const listHeader = (
     <>
-      <Text style={styles.greeting}>{greeting()}</Text>
+      <View style={styles.headerBlock}>
+        <Text style={styles.headerEyebrow}>{todayLabel()}</Text>
+        <Text style={styles.headerTitle}>Overview</Text>
+      </View>
 
       <MonthSwitcher
         monthKey={selectedMonthKey}
@@ -255,10 +259,21 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: 100,
   },
-  greeting: {
-    color: colors.subText,
-    fontSize: 15,
+  headerBlock: {
     marginBottom: spacing.md,
+  },
+  headerEyebrow: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  headerTitle: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -0.4,
+    marginTop: 2,
   },
   toolRow: {
     flexDirection: 'row',
