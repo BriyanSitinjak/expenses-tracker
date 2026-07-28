@@ -12,7 +12,6 @@ import { getMonthKey, shiftMonthKey } from '../utils/date';
 
 type ImportResult = {
   added: number;
-  skipped: number;
 };
 
 type BudgetActions = {
@@ -54,13 +53,6 @@ function sumSpent(expenses: Expense[]): number {
 // Creates a stable unique id without external dependency.
 function createExpenseId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-// Builds a fuzzy fingerprint used to detect duplicate transactions on import.
-function fingerprint(date: string, amount: number, label: string): string {
-  const day = date.slice(0, 10);
-  const normalizedLabel = label.trim().toLowerCase().replace(/\s+/g, ' ');
-  return `${day}|${amount.toFixed(2)}|${normalizedLabel}`;
 }
 
 // Returns true when two names match ignoring case/whitespace.
@@ -229,60 +221,42 @@ export const useBudgetStore = create<BudgetStore>()(
         });
       },
 
-      // Bulk-imports drafts (e.g. parsed bank statement), skipping duplicates.
+      // Bulk-imports drafts. Same-day identical amounts are kept — legitimate repeats happen.
       importExpenses: (drafts) => {
-        const existing = get().expenses;
-        const seen = new Set(
-          existing.map((item) => fingerprint(item.date, item.amount, item.merchant || item.note || ''))
-        );
+        if (drafts.length === 0) return { added: 0 };
 
-        const accepted: Expense[] = [];
-        let skipped = 0;
+        const accepted: Expense[] = drafts.map((draft) => ({
+          id: createExpenseId(),
+          date: draft.date,
+          amount: draft.amount,
+          category: draft.category,
+          subcategory: draft.subcategory,
+          merchant: draft.merchant,
+          note: draft.note,
+          source: draft.source,
+          method: draft.method,
+          type: draft.type,
+        }));
 
-        for (const draft of drafts) {
-          const key = fingerprint(draft.date, draft.amount, draft.merchant || draft.note || '');
-
-          if (seen.has(key)) {
-            skipped += 1;
-            continue;
-          }
-
-          seen.add(key);
-          accepted.push({
-            id: createExpenseId(),
-            date: draft.date,
-            amount: draft.amount,
-            category: draft.category,
-            subcategory: draft.subcategory,
-            merchant: draft.merchant,
-            note: draft.note,
-            source: draft.source,
-            method: draft.method,
-            type: draft.type,
-          });
-        }
-
-        if (accepted.length > 0) {
-          set((state) => {
-            let categories = state.categories;
-            let subcategories = state.subcategories;
-            for (const item of accepted) {
-              categories = withCategory(categories, item.category);
-              if (item.subcategory) {
-                subcategories = withSubcategory(subcategories, item.category, item.subcategory);
-              }
+        set((state) => {
+          let categories = state.categories;
+          let subcategories = state.subcategories;
+          for (const item of accepted) {
+            categories = withCategory(categories, item.category);
+            if (item.subcategory) {
+              subcategories = withSubcategory(subcategories, item.category, item.subcategory);
             }
-            return {
-              expenses: [...accepted, ...state.expenses].sort(
-                (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-              ),
-              categories,
-              subcategories,
-            };
-          });
-        }
+          }
+          return {
+            expenses: [...accepted, ...state.expenses].sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+            ),
+            categories,
+            subcategories,
+          };
+        });
 
-        return { added: accepted.length, skipped };
+        return { added: accepted.length };
       },
 
       // Removes one transaction by id.

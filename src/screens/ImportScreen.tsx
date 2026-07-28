@@ -158,12 +158,11 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
         totalSteps: 1,
       });
       await yieldToUI();
-      const { added, skipped } = importExpenses(report.drafts);
+      const { added } = importExpenses(report.drafts);
       setProgress(null);
       Alert.alert(
         'Import complete',
-        `Added ${added} transaction${added === 1 ? '' : 's'}.` +
-          (skipped > 0 ? `\nSkipped ${skipped} duplicate${skipped === 1 ? '' : 's'}.` : ''),
+        `Added ${added} transaction${added === 1 ? '' : 's'}.`,
         [
           {
             text: 'OK',
