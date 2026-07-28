@@ -36,7 +36,7 @@ export function BudgetSetupScreen({ navigation }: BudgetSetupScreenProps) {
       <Card>
         <Text style={styles.title}>Set your monthly budget</Text>
         <Text style={styles.subtitle}>
-          We&apos;ll track your spending against this and reward you for staying under it.
+          We&apos;ll track your spending against this amount each month.
         </Text>
         <TextInputField
           keyboardType="numeric"
@@ -58,7 +58,7 @@ export function BudgetSetupScreen({ navigation }: BudgetSetupScreenProps) {
           ))}
         </View>
 
-        <Button icon="🎯" label="Save Budget" onPress={handleSaveBudget} />
+        <Button icon="checkmark" label="Save Budget" onPress={handleSaveBudget} />
       </Card>
     </View>
   );

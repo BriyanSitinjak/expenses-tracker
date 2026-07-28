@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../constants/theme';
+import { colors, spacing, surface } from '../constants/theme';
 
 type TransferStatusModalProps = {
   visible: boolean;
@@ -26,22 +26,19 @@ export function TransferStatusModal({ visible, title, message }: TransferStatusM
 const styles = StyleSheet.create({
   backdrop: {
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    backgroundColor: colors.overlay,
     flex: 1,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   card: {
     alignItems: 'center',
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    borderWidth: 1,
     gap: spacing.sm,
     maxWidth: 320,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
     width: '100%',
+    ...surface('md'),
   },
   title: {
     color: colors.text,

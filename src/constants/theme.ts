@@ -33,11 +33,20 @@ export const colors = {
   success: '#6F8F6A',
   warning: '#C4964A',
   danger: '#B85C4E',
-  gold: '#C4A35A',
   border: '#D1CDC7',
   track: '#E8E2D8',
   onAccent: '#FFFFFF',
+  overlay: 'rgba(44, 41, 38, 0.45)',
 };
+
+// Appends an alpha channel to a #RRGGBB color (alpha is 0..1).
+export function withAlpha(hex: string, alpha: number): string {
+  const cleaned = hex.replace('#', '').slice(0, 6);
+  const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `#${cleaned}${a}`;
+}
 
 // Warm clay / ochre / berry tones reserved for CATEGORY badges only.
 const CATEGORY_PALETTE = [
@@ -127,17 +136,16 @@ export function colorForSubcategory(subcategory: string, parentCategory?: string
 }
 
 // Cross-platform elevation/shadow helper (softened for light Scandinavian UI).
-export function shadow(level: 'sm' | 'md' | 'lg' = 'md'): ViewStyle {
+export function shadow(level: 'sm' | 'md' = 'md'): ViewStyle {
   const map = {
     sm: { radius: 6, opacity: 0.06, height: 2, elevation: 1 },
     md: { radius: 12, opacity: 0.1, height: 4, elevation: 3 },
-    lg: { radius: 20, opacity: 0.14, height: 8, elevation: 6 },
   } as const;
   const config = map[level];
 
   return Platform.select<ViewStyle>({
     ios: {
-      shadowColor: '#2C2926',
+      shadowColor: colors.text,
       shadowOffset: { width: 0, height: config.height },
       shadowOpacity: config.opacity,
       shadowRadius: config.radius,
@@ -145,4 +153,18 @@ export function shadow(level: 'sm' | 'md' | 'lg' = 'md'): ViewStyle {
     android: { elevation: config.elevation },
     default: {},
   }) as ViewStyle;
+}
+
+// Shared card/surface chrome used by cards, action tiles, and metric tiles.
+export function surface(
+  level: 'sm' | 'md' = 'md',
+  options?: { radius?: keyof typeof radius }
+): ViewStyle {
+  return {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderRadius: radius[options?.radius ?? 'lg'],
+    borderWidth: 1,
+    ...shadow(level),
+  };
 }

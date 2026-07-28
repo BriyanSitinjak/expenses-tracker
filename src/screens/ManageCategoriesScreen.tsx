@@ -11,9 +11,17 @@ import {
 } from 'react-native';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { Icon } from '../components/Icon';
 import { InlineAddRow } from '../components/InlineAddRow';
 import { FALLBACK_CATEGORY } from '../constants/categories';
-import { colorForCategory, colorForSubcategory, colors, radius, spacing } from '../constants/theme';
+import {
+  colorForCategory,
+  colorForSubcategory,
+  colors,
+  radius,
+  spacing,
+  withAlpha,
+} from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 
@@ -94,7 +102,7 @@ export function ManageCategoriesScreen(_: ManageCategoriesScreenProps) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Button
-        icon={addingCategory ? '×' : '➕'}
+        icon={addingCategory ? 'close' : 'add'}
         label={addingCategory ? 'Cancel' : 'New category'}
         variant={addingCategory ? 'secondary' : 'primary'}
         onPress={() => setAddingCategory((v) => !v)}
@@ -166,14 +174,14 @@ export function ManageCategoriesScreen(_: ManageCategoriesScreenProps) {
                     hitSlop={8}
                     style={styles.iconBtn}
                   >
-                    <Text style={styles.icon}>✎</Text>
+                    <Icon name="create" size={18} color={colors.subText} />
                   </Pressable>
                   <Pressable
                     onPress={() => confirmDeleteCategory(name)}
                     hitSlop={8}
                     style={styles.iconBtn}
                   >
-                    <Text style={styles.icon}>🗑</Text>
+                    <Icon name="trash" size={18} color={colors.danger} />
                   </Pressable>
                 </View>
               )}
@@ -187,7 +195,10 @@ export function ManageCategoriesScreen(_: ManageCategoriesScreenProps) {
                     key={sub}
                     style={[
                       styles.subChip,
-                      { backgroundColor: subColor + '18', borderColor: subColor + '66' },
+                      {
+                        backgroundColor: withAlpha(subColor, 0.1),
+                        borderColor: withAlpha(subColor, 0.4),
+                      },
                     ]}
                   >
                     <View style={[styles.subDot, { backgroundColor: subColor }]} />
@@ -292,9 +303,6 @@ const styles = StyleSheet.create({
   iconBtn: {
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
-  },
-  icon: {
-    fontSize: 18,
   },
   save: {
     color: colors.success,

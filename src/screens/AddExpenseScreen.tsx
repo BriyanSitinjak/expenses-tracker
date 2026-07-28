@@ -12,11 +12,19 @@ import {
 } from 'react-native';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { Icon, IconName } from '../components/Icon';
 import { InlineAddRow } from '../components/InlineAddRow';
 import { MonthPeriodBanner } from '../components/MonthPeriodBanner';
 import { TextInputField } from '../components/TextInputField';
 import { WITHDRAWAL_CATEGORY } from '../constants/categories';
-import { colorForCategory, colorForSubcategory, colors, radius, spacing } from '../constants/theme';
+import {
+  colorForCategory,
+  colorForSubcategory,
+  colors,
+  radius,
+  spacing,
+  withAlpha,
+} from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { PaymentMethod } from '../types';
@@ -27,9 +35,9 @@ type AddExpenseScreenProps = NativeStackScreenProps<RootStackParamList, 'AddExpe
 
 type Mode = 'expense' | 'withdrawal';
 
-const METHODS: { key: PaymentMethod; label: string; icon: string }[] = [
-  { key: 'debit', label: 'Debit', icon: '💳' },
-  { key: 'cash', label: 'Cash', icon: '💵' },
+const METHODS: { key: PaymentMethod; label: string; icon: IconName }[] = [
+  { key: 'debit', label: 'Debit', icon: 'card' },
+  { key: 'cash', label: 'Cash', icon: 'cash' },
 ];
 
 // Screen to create a new expense or a cash withdrawal (transfer).
@@ -144,9 +152,16 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
               onPress={() => setMode(item)}
               style={[styles.segmentBtn, active && styles.segmentActive]}
             >
-              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                {item === 'expense' ? '🧾  Expense' : '💵  Withdraw cash'}
-              </Text>
+              <View style={styles.segmentContent}>
+                <Icon
+                  name={item === 'expense' ? 'receipt' : 'arrow-up'}
+                  size={16}
+                  color={active ? colors.onAccent : colors.subText}
+                />
+                <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                  {item === 'expense' ? 'Expense' : 'Withdraw cash'}
+                </Text>
+              </View>
             </Pressable>
           );
         })}
@@ -187,9 +202,16 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
                     onPress={() => setMethod(item.key)}
                     style={[styles.methodBtn, active && styles.methodActive]}
                   >
-                    <Text style={[styles.methodText, active && styles.methodTextActive]}>
-                      {item.icon}  {item.label}
-                    </Text>
+                    <View style={styles.methodContent}>
+                      <Icon
+                        name={item.icon}
+                        size={16}
+                        color={active ? colors.primary : colors.text}
+                      />
+                      <Text style={[styles.methodText, active && styles.methodTextActive]}>
+                        {item.label}
+                      </Text>
+                    </View>
                   </Pressable>
                 );
               })}
@@ -221,7 +243,10 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
                     }}
                     style={[
                       styles.chip,
-                      active && { backgroundColor: color + '22', borderColor: color },
+                      active && {
+                        backgroundColor: withAlpha(color, 0.13),
+                        borderColor: color,
+                      },
                     ]}
                   >
                     <View style={[styles.chipDot, { backgroundColor: color }]} />
@@ -255,7 +280,10 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
                     onPress={() => setSubcategory(active ? undefined : item)}
                     style={[
                       styles.subChip,
-                      active && { backgroundColor: color + '22', borderColor: color },
+                      active && {
+                        backgroundColor: withAlpha(color, 0.13),
+                        borderColor: color,
+                      },
                     ]}
                   >
                     <View style={[styles.chipDot, { backgroundColor: color }]} />
@@ -288,7 +316,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         />
 
         <Button
-          icon={mode === 'withdrawal' ? '💵' : '💾'}
+          icon={mode === 'withdrawal' ? 'arrow-up' : 'checkmark'}
           label={mode === 'withdrawal' ? 'Save Withdrawal' : 'Save Expense'}
           onPress={handleSave}
         />
@@ -322,6 +350,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: radius.md,
   },
+  segmentContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
   segmentActive: {
     backgroundColor: colors.primary,
   },
@@ -330,7 +363,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   segmentTextActive: {
-    color: '#FFFFFF',
+    color: colors.onAccent,
   },
   hint: {
     color: colors.subText,
@@ -359,7 +392,12 @@ const styles = StyleSheet.create({
   },
   methodActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '22',
+    backgroundColor: withAlpha(colors.primary, 0.13),
+  },
+  methodContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   methodText: {
     color: colors.text,

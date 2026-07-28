@@ -184,7 +184,7 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
   const listHeader = (
     <View>
       <Card style={styles.infoCard}>
-        <Text style={styles.infoTitle}>🏦 Import transactions</Text>
+        <Text style={styles.infoTitle}>Import transactions</Text>
         <Text style={styles.infoText}>
           Import an Excel (.xlsx) or CSV backup from this app, or a bank statement CSV. App backups
           keep categories, payment method, and notes. Bank files need Date, Description and Amount
@@ -192,14 +192,14 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
         </Text>
         <View style={styles.buttonRow}>
           <Button
-            icon="📁"
+            icon="document"
             label={loading ? 'Reading…' : 'Pick file'}
             onPress={handlePickFile}
             style={styles.flexBtn}
             disabled={loading || progress != null}
           />
           <Button
-            icon="✨"
+            icon="flash"
             variant="secondary"
             label="Try demo"
             onPress={handleDemo}
@@ -254,7 +254,7 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
       {drafts.length > 0 ? (
         <View style={styles.footer}>
           <Button
-            icon="⬇️"
+            icon="download"
             label={`Import ${drafts.length} transaction${drafts.length === 1 ? '' : 's'}`}
             onPress={handleConfirmImport}
             disabled={progress != null}

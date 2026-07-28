@@ -1,6 +1,13 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { colorForCategory, colorForSubcategory, colors, radius, spacing } from '../constants/theme';
+import {
+  colorForCategory,
+  colorForSubcategory,
+  colors,
+  radius,
+  spacing,
+  withAlpha,
+} from '../constants/theme';
 import { Expense, PaymentMethod } from '../types';
 import { formatCurrency } from '../utils/format';
 
@@ -29,14 +36,14 @@ function methodStyles(method: PaymentMethod, isWithdrawal: boolean) {
     return {
       row: styles.rowCash,
       badge: styles.badgeCash,
-      badgeText: '💵 Cash',
+      badgeText: 'Cash',
       amount: styles.amountCash,
     };
   }
   return {
     row: styles.rowDebit,
     badge: styles.badgeDebit,
-    badgeText: '💳 Debit',
+    badgeText: 'Debit',
     amount: styles.amountDebit,
   };
 }
@@ -72,7 +79,7 @@ export function TransactionRow({ item, onLongPress, style, compact }: Transactio
               {isWithdrawal
                 ? 'Transfer → Cash'
                 : `${item.category}${item.subcategory ? ` · ${item.subcategory}` : ''} · ${
-                    item.method === 'cash' ? '💵' : '💳'
+                    item.method === 'cash' ? 'Cash' : 'Debit'
                   }`}
               {' · '}
               {new Date(item.date).toLocaleDateString()}
@@ -81,14 +88,22 @@ export function TransactionRow({ item, onLongPress, style, compact }: Transactio
         ) : (
           <>
             <View style={styles.badgeRow}>
-              <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '22' }]}>
+              <View
+                style={[
+                  styles.categoryBadge,
+                  { backgroundColor: withAlpha(categoryColor, 0.13) },
+                ]}
+              >
                 <Text style={[styles.categoryBadgeText, { color: categoryColor }]}>
                   {item.category}
                 </Text>
               </View>
               {item.subcategory && subcategoryColor ? (
                 <View
-                  style={[styles.subcategoryBadge, { backgroundColor: subcategoryColor + '22' }]}
+                  style={[
+                    styles.subcategoryBadge,
+                    { backgroundColor: withAlpha(subcategoryColor, 0.13) },
+                  ]}
                 >
                   <Text style={[styles.subcategoryBadgeText, { color: subcategoryColor }]}>
                     {item.subcategory}
@@ -148,12 +163,12 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   rowDebit: {
-    backgroundColor: colors.primary + '10',
+    backgroundColor: withAlpha(colors.primary, 0.06),
     borderLeftColor: colors.primary,
     borderLeftWidth: 3,
   },
   rowCash: {
-    backgroundColor: colors.success + '10',
+    backgroundColor: withAlpha(colors.success, 0.06),
     borderLeftColor: colors.success,
     borderLeftWidth: 3,
   },
@@ -232,7 +247,7 @@ const styles = StyleSheet.create({
   },
   badgeDebit: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.primary + '22',
+    backgroundColor: withAlpha(colors.primary, 0.13),
     borderRadius: radius.pill,
     marginTop: 4,
     paddingHorizontal: spacing.sm,
@@ -240,7 +255,7 @@ const styles = StyleSheet.create({
   },
   badgeCash: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.success + '22',
+    backgroundColor: withAlpha(colors.success, 0.13),
     borderRadius: radius.pill,
     marginTop: 4,
     paddingHorizontal: spacing.sm,

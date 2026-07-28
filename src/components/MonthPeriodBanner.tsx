@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { colors, radius, spacing } from '../constants/theme';
+import { colors, radius, spacing, withAlpha } from '../constants/theme';
 
 type MonthPeriodBannerProps = {
   message: string;
@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
     marginTop: -spacing.sm,
   },
   callout: {
-    backgroundColor: colors.accent + '14',
+    backgroundColor: withAlpha(colors.accent, 0.08),
     borderColor: colors.accent,
     borderRadius: radius.md,
     borderWidth: 1,

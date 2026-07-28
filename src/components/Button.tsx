@@ -1,15 +1,16 @@
 import React, { useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
+import { Icon, IconName } from './Icon';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost'; // TECHDEBT: ghost variant is unused today
+type ButtonVariant = 'primary' | 'secondary';
 
 type ButtonProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
   variant?: ButtonVariant;
-  icon?: string;
+  icon?: IconName;
   style?: ViewStyle;
 };
 
@@ -33,13 +34,7 @@ export function Button({
     }).start();
   };
 
-  const variantStyle =
-    variant === 'primary'
-      ? styles.primary
-      : variant === 'secondary'
-        ? styles.secondary
-        : styles.ghost;
-  const textStyle = variant === 'primary' ? styles.primaryText : styles.secondaryText;
+  const isPrimary = variant === 'primary';
 
   return (
     <Animated.View style={[{ transform: [{ scale }] }, styles.wrapper, style]}>
@@ -48,12 +43,20 @@ export function Button({
         disabled={disabled}
         onPressIn={() => animateTo(0.96)}
         onPressOut={() => animateTo(1)}
-        style={[styles.button, variantStyle, disabled ? styles.disabled : null]}
+        style={[
+          styles.button,
+          isPrimary ? styles.primary : styles.secondary,
+          disabled ? styles.disabled : null,
+        ]}
       >
-        <Text style={[styles.label, textStyle]}>
-          {icon ? `${icon}  ` : ''}
-          {label}
-        </Text>
+        <View style={styles.content}>
+          {icon ? (
+            <Icon name={icon} size={18} color={isPrimary ? colors.onAccent : colors.text} />
+          ) : null}
+          <Text style={[styles.label, isPrimary ? styles.primaryText : styles.secondaryText]}>
+            {label}
+          </Text>
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -70,6 +73,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  content: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
   primary: {
     backgroundColor: colors.primary,
     ...shadow('sm'),
@@ -79,15 +87,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
   label: {
     fontSize: 16,
     fontWeight: '700',
   },
   primaryText: {
-    color: '#FFFFFF',
+    color: colors.onAccent,
   },
   secondaryText: {
     color: colors.text,

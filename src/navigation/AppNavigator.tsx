@@ -1,20 +1,21 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Pressable } from 'react-native';
+import { Icon } from '../components/Icon';
 import { colors } from '../constants/theme';
 import { AddExpenseScreen } from '../screens/AddExpenseScreen';
 import { BudgetSetupScreen } from '../screens/BudgetSetupScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ImportScreen } from '../screens/ImportScreen';
-import { InsightsScreen } from '../screens/InsightsScreen';
 import { ManageCategoriesScreen } from '../screens/ManageCategoriesScreen';
+import { StatsScreen } from '../screens/StatsScreen';
 
 export type RootStackParamList = {
   Dashboard: undefined;
   AddExpense: undefined;
   BudgetSetup: undefined;
   Import: undefined;
-  Insights: undefined;
+  Stats: undefined;
   Manage: undefined;
 };
 
@@ -39,7 +40,7 @@ export function AppNavigator() {
           title: 'My Expenses',
           headerRight: () => (
             <Pressable onPress={() => navigation.navigate('Manage')} hitSlop={12}>
-              <Text style={{ fontSize: 20 }}>⚙️</Text>
+              <Icon name="settings-sharp" size={22} color={colors.text} />
             </Pressable>
           ),
         })}
@@ -57,12 +58,12 @@ export function AppNavigator() {
       <Stack.Screen
         component={ImportScreen}
         name="Import"
-        options={{ title: 'Import from Bank' }}
+        options={{ title: 'Import' }}
       />
       <Stack.Screen
-        component={InsightsScreen}
-        name="Insights"
-        options={{ title: 'Insights & Badges' }}
+        component={StatsScreen}
+        name="Stats"
+        options={{ title: 'Stats' }}
       />
       <Stack.Screen
         component={ManageCategoriesScreen}

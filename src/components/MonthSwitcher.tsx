@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
 import { getMonthLabel, isCurrentMonth } from '../utils/date';
+import { Icon } from './Icon';
 
 type MonthSwitcherProps = {
   monthKey: string;
@@ -12,7 +13,7 @@ type MonthSwitcherProps = {
   canGoNext: boolean;
 };
 
-// Clear month navigation so users know which period they are viewing.
+// Compact period control: month label + chevrons, still easy to scan.
 export function MonthSwitcher({
   monthKey,
   transactionCount,
@@ -24,9 +25,7 @@ export function MonthSwitcher({
   const viewingCurrentMonth = isCurrentMonth(monthKey);
 
   return (
-    <View style={[styles.wrap, !viewingCurrentMonth && styles.wrapHighlighted]}>
-      <Text style={styles.caption}>Viewing period</Text>
-
+    <View style={styles.wrap}>
       <View style={styles.row}>
         <Pressable
           onPress={onPrevious}
@@ -34,13 +33,15 @@ export function MonthSwitcher({
           style={({ pressed }) => [styles.arrowBtn, pressed && styles.arrowPressed]}
           accessibilityLabel="Previous month"
         >
-          <Text style={styles.arrow}>‹</Text>
+          <Icon name="chevron-back" size={20} color={colors.text} />
         </Pressable>
 
         <View style={styles.center}>
           <Text style={styles.month}>{getMonthLabel(monthKey)}</Text>
           <Text style={styles.meta}>
-            {transactionCount} transaction{transactionCount === 1 ? '' : 's'} in this period
+            {viewingCurrentMonth ? 'This month' : 'Past period'}
+            {' · '}
+            {transactionCount} txn{transactionCount === 1 ? '' : 's'}
           </Text>
         </View>
 
@@ -55,45 +56,30 @@ export function MonthSwitcher({
           ]}
           accessibilityLabel="Next month"
         >
-          <Text style={[styles.arrow, !canGoNext && styles.arrowTextDisabled]}>›</Text>
+          <Icon
+            name="chevron-forward"
+            size={20}
+            color={canGoNext ? colors.text : colors.muted}
+          />
         </Pressable>
       </View>
 
-      {viewingCurrentMonth ? (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>This month</Text>
-        </View>
-      ) : (
+      {!viewingCurrentMonth ? (
         <Pressable
           onPress={onGoToCurrent}
-          style={({ pressed }) => [styles.todayBtn, pressed && styles.todayPressed]}
+          hitSlop={8}
+          style={({ pressed }) => [styles.todayLink, pressed && styles.todayPressed]}
         >
-          <Text style={styles.todayText}>Go to current month</Text>
+          <Text style={styles.todayText}>Back to current month</Text>
         </Pressable>
-      )}
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    marginBottom: spacing.lg,
-    padding: spacing.md,
-  },
-  wrapHighlighted: {
-    borderColor: colors.accent,
-  },
-  caption: {
-    color: colors.subText,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    marginBottom: spacing.sm,
-    textTransform: 'uppercase',
+    marginBottom: spacing.md,
   },
   row: {
     alignItems: 'center',
@@ -102,28 +88,19 @@ const styles = StyleSheet.create({
   },
   arrowBtn: {
     alignItems: 'center',
-    backgroundColor: colors.bgElevated,
+    backgroundColor: colors.card,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
-    height: 40,
+    height: 36,
     justifyContent: 'center',
-    width: 40,
+    width: 36,
   },
   arrowPressed: {
     backgroundColor: colors.cardAlt,
   },
   arrowDisabled: {
-    opacity: 0.35,
-  },
-  arrow: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '300',
-    lineHeight: 30,
-  },
-  arrowTextDisabled: {
-    color: colors.muted,
+    opacity: 0.4,
   },
   center: {
     flex: 1,
@@ -131,7 +108,7 @@ const styles = StyleSheet.create({
   },
   month: {
     color: colors.text,
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
     textAlign: 'center',
   },
@@ -141,35 +118,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: 'center',
   },
-  badge: {
+  todayLink: {
     alignSelf: 'center',
-    backgroundColor: colors.primary + '22',
-    borderRadius: radius.pill,
     marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  badgeText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  todayBtn: {
-    alignSelf: 'center',
-    backgroundColor: colors.accent + '18',
-    borderColor: colors.accent,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: 2,
   },
   todayPressed: {
-    opacity: 0.8,
+    opacity: 0.7,
   },
   todayText: {
-    color: colors.accent,
-    fontSize: 12,
-    fontWeight: '800',
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
