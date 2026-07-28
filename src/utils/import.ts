@@ -83,7 +83,7 @@ function findColumn(headers: string[], keywords: string[]): number {
   return headers.findIndex((header) => keywords.some((keyword) => header.includes(keyword)));
 }
 
-export type ImportFormat = 'bank' | 'backup';
+type ImportFormat = 'bank' | 'backup';
 
 export type ParseReport = {
   drafts: DraftExpense[];
@@ -95,7 +95,7 @@ export type ParseReport = {
 };
 
 // Converts raw CSV text from a bank statement export into draft expenses.
-export function parseBankCsv(text: string): ParseReport {
+function parseBankCsv(text: string): ParseReport {
   const rows = parseCsv(text);
   const report: ParseReport = {
     drafts: [],
@@ -276,7 +276,7 @@ function pushBackupDraft(
 }
 
 // Parses a matrix (header row + data) in the app backup column format.
-export function parseBackupMatrix(rows: string[][]): ParseReport {
+function parseBackupMatrix(rows: string[][]): ParseReport {
   const report = emptyReport('backup');
   if (rows.length === 0) return report;
 
@@ -309,7 +309,7 @@ export function parseBackupMatrix(rows: string[][]): ParseReport {
 }
 
 // Parses a CSV produced by exportTransactionsBackup (app backup format).
-export function parseBackupCsv(text: string): ParseReport {
+function parseBackupCsv(text: string): ParseReport {
   return parseBackupMatrix(parseCsv(text));
 }
 

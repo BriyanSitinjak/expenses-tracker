@@ -11,7 +11,7 @@ import {
 import { Expense, PaymentMethod } from '../types';
 import { formatCurrency } from '../utils/format';
 
-export type TransactionRowData = Pick<
+type TransactionRowData = Pick<
   Expense,
   'category' | 'subcategory' | 'merchant' | 'note' | 'date' | 'amount' | 'type' | 'method' | 'source'
 >;

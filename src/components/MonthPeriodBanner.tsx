@@ -1,15 +1,37 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { colors, radius, spacing, withAlpha } from '../constants/theme';
+import { getMonthLabel, monthRelation } from '../utils/date';
 
 type MonthPeriodBannerProps = {
-  message: string;
-  variant?: 'hint' | 'callout';
+  monthKey: string;
+  /** `view` = dashboard notice, `save` = add-expense callout */
+  context?: 'view' | 'save';
 };
 
-// Reusable notice when the user is viewing or editing a non-current month.
-export function MonthPeriodBanner({ message, variant = 'hint' }: MonthPeriodBannerProps) {
-  return <Text style={variant === 'callout' ? styles.callout : styles.hint}>{message}</Text>;
+function messageFor(monthKey: string, context: 'view' | 'save'): string | null {
+  const relation = monthRelation(monthKey);
+  if (relation === 'current') return null;
+
+  const label = getMonthLabel(monthKey);
+
+  if (context === 'save') {
+    return relation === 'future'
+      ? `Saving into upcoming ${label}.`
+      : `Saving into ${label}.`;
+  }
+
+  return relation === 'future'
+    ? `Planning ${label}. New entries are saved in this upcoming month.`
+    : `Showing ${label} only. Cash on hand stays all-time.`;
+}
+
+// Notice when viewing or saving into a non-current month. Renders nothing for the current month.
+export function MonthPeriodBanner({ monthKey, context = 'view' }: MonthPeriodBannerProps) {
+  const message = messageFor(monthKey, context);
+  if (!message) return null;
+
+  return <Text style={context === 'save' ? styles.callout : styles.hint}>{message}</Text>;
 }
 
 const styles = StyleSheet.create({

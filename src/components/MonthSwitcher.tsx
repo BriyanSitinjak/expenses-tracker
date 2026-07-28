@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing } from '../constants/theme';
+import { colors, radius, spacing, withAlpha } from '../constants/theme';
 import { getMonthLabel, monthRelation } from '../utils/date';
 import { ChevronStepper } from './ChevronStepper';
 
@@ -31,21 +31,23 @@ export function MonthSwitcher({
         onPrevious={onPrevious}
         onNext={onNext}
       />
-      <Text style={styles.meta}>
-        {periodMeta}
-        {' · '}
-        {transactionCount} txn{transactionCount === 1 ? '' : 's'}
-      </Text>
+      <View style={styles.metaRow}>
+        <Text style={styles.meta}>
+          {periodMeta}
+          {' · '}
+          {transactionCount} txn{transactionCount === 1 ? '' : 's'}
+        </Text>
 
-      {relation !== 'current' ? (
-        <Pressable
-          onPress={onGoToCurrent}
-          hitSlop={8}
-          style={({ pressed }) => [styles.todayLink, pressed && styles.todayPressed]}
-        >
-          <Text style={styles.todayText}>Back to current month</Text>
-        </Pressable>
-      ) : null}
+        {relation !== 'current' ? (
+          <Pressable
+            onPress={onGoToCurrent}
+            hitSlop={8}
+            style={({ pressed }) => [styles.todayBtn, pressed && styles.todayPressed]}
+          >
+            <Text style={styles.todayText}>Today</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -54,23 +56,30 @@ const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.md,
   },
+  metaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
   meta: {
     color: colors.subText,
     fontSize: 12,
-    marginTop: spacing.xs,
     textAlign: 'center',
   },
-  todayLink: {
-    alignSelf: 'center',
-    marginTop: spacing.sm,
-    paddingVertical: 2,
+  todayBtn: {
+    backgroundColor: withAlpha(colors.primary, 0.12),
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
   },
   todayPressed: {
     opacity: 0.7,
   },
   todayText: {
     color: colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

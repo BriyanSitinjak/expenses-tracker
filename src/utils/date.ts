@@ -7,42 +7,17 @@ function getFirstDayOfMonth(monthKey: string): string {
   return `${monthKey}-01`;
 }
 
-// Returns today's date when the month is current, otherwise the first day of the month.
-export function defaultDateForMonth(monthKey: string): string {
-  const today = new Date();
-  const todayKey = getMonthKey(today);
-  if (monthKey !== todayKey) return getFirstDayOfMonth(monthKey);
-  return getDayKey(today);
-}
-
-// Number of calendar days in a month key ("YYYY-MM").
-export function getDaysInMonth(monthKey: string): number {
-  const [year, month] = monthKey.split('-').map(Number);
-  return new Date(year, month, 0).getDate();
-}
-
-function dayKeyInMonth(monthKey: string, day: number): string {
-  const max = getDaysInMonth(monthKey);
-  const safeDay = Math.max(1, Math.min(day, max));
-  return `${monthKey}-${String(safeDay).padStart(2, '0')}`;
-}
-
-// Shifts a day key by N days, staying inside the same month.
-export function shiftDayInMonth(dayKey: string, delta: number): string {
-  const monthKey = dayKey.slice(0, 7);
-  const day = Number(dayKey.slice(8, 10));
-  return dayKeyInMonth(monthKey, day + delta);
-}
-
-// Human label for a day key, e.g. "28 Jul 2026".
-export function formatDayLabel(dayKey: string): string {
+function dayKeyToIso(dayKey: string): string {
   const [year, month, day] = dayKey.split('-').map(Number);
-  const date = new Date(year, (month ?? 1) - 1, day ?? 1);
-  return date.toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  const date = new Date(year, (month ?? 1) - 1, day ?? 1, 12, 0, 0);
+  return date.toISOString();
+}
+
+// ISO timestamp for a new entry in the given month (today if current, else the 1st).
+export function dateForMonth(monthKey: string): string {
+  const today = new Date();
+  if (monthKey === getMonthKey(today)) return dayKeyToIso(getDayKey(today));
+  return dayKeyToIso(getFirstDayOfMonth(monthKey));
 }
 
 // How a month key relates to the real calendar month.
@@ -60,7 +35,7 @@ export function shiftMonthKey(monthKey: string, delta: number): string {
   return getMonthKey(date);
 }
 
-// Returns a local day key in "YYYY-MM-DD" format for streak/day grouping.
+// Returns a local day key in "YYYY-MM-DD" format.
 export function getDayKey(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
     date.getDate()
@@ -74,11 +49,13 @@ export function getMonthLabel(monthKey: string): string {
   return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
-// Converts a day key ("YYYY-MM-DD") to a stable local noon ISO timestamp.
-export function dayKeyToIso(dayKey: string): string {
-  const [year, month, day] = dayKey.split('-').map(Number);
-  const date = new Date(year, (month ?? 1) - 1, day ?? 1, 12, 0, 0);
-  return date.toISOString();
+// Dashboard header date, e.g. "Monday, Jul 28".
+export function formatTodayLabel(date = new Date()): string {
+  return date.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 // Tries hard to parse messy date strings found in bank statements.

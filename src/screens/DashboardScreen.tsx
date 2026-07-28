@@ -28,17 +28,9 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { Expense } from '../types';
 import { budgetSnapshot, monthCashStats, sumByCategory } from '../utils/analytics';
-import { getMonthLabel, monthRelation } from '../utils/date';
+import { formatTodayLabel, getMonthLabel, monthRelation } from '../utils/date';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
-
-function todayLabel(): string {
-  return new Date().toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const insets = useSafeAreaInsets();
@@ -116,8 +108,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const listHeader = (
     <>
       <View style={styles.headerBlock}>
-        <Text style={styles.headerEyebrow}>{todayLabel()}</Text>
-        <Text style={styles.headerTitle}>Overview</Text>
+        <Text style={styles.headerTitle}>{formatTodayLabel()}</Text>
       </View>
 
       <MonthSwitcher
@@ -128,15 +119,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         onGoToCurrent={goToCurrentMonth}
       />
 
-      {periodRelation !== 'current' ? (
-        <MonthPeriodBanner
-          message={
-            periodRelation === 'future'
-              ? `Planning ${getMonthLabel(selectedMonthKey)}. New entries are saved in this upcoming month.`
-              : `Showing ${getMonthLabel(selectedMonthKey)} only. Cash on hand stays all-time.`
-          }
-        />
-      ) : null}
+      <MonthPeriodBanner monthKey={selectedMonthKey} />
 
       <BudgetHeroCard
         remaining={budgetRemaining}
@@ -265,18 +248,11 @@ const styles = StyleSheet.create({
   headerBlock: {
     marginBottom: spacing.md,
   },
-  headerEyebrow: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
   headerTitle: {
     color: colors.text,
     fontSize: 28,
     fontWeight: '900',
     letterSpacing: -0.4,
-    marginTop: 2,
   },
   toolRow: {
     flexDirection: 'row',

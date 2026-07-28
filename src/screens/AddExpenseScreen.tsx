@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { ChevronStepper } from '../components/ChevronStepper';
 import { Icon, IconName } from '../components/Icon';
 import { InlineAddRow } from '../components/InlineAddRow';
 import { MonthPeriodBanner } from '../components/MonthPeriodBanner';
@@ -30,16 +29,7 @@ import {
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { PaymentMethod } from '../types';
-import {
-  dayKeyToIso,
-  defaultDateForMonth,
-  formatDayLabel,
-  getDayKey,
-  getDaysInMonth,
-  getMonthLabel,
-  monthRelation,
-  shiftDayInMonth,
-} from '../utils/date';
+import { dateForMonth } from '../utils/date';
 import { formatAmountInput, formatCurrency, parseAmountInput, stripAmountInput } from '../utils/format';
 
 type AddExpenseScreenProps = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
@@ -63,7 +53,6 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
   const [method, setMethod] = useState<PaymentMethod>('debit');
   const [category, setCategory] = useState(categories[0] ?? 'Food');
   const [subcategory, setSubcategory] = useState<string | undefined>(undefined);
-  const [dayKey, setDayKey] = useState(() => defaultDateForMonth(selectedMonthKey));
 
   const [addingCat, setAddingCat] = useState(false);
   const [newCategory, setNewCategory] = useState('');
@@ -71,17 +60,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
   const [newSub, setNewSub] = useState('');
 
   const subOptions = subcategories[category] ?? [];
-  const period = monthRelation(selectedMonthKey);
-  const dayNumber = Number(dayKey.slice(8, 10));
-  const daysInMonth = getDaysInMonth(selectedMonthKey);
-  const canGoPrevDay = dayNumber > 1;
-  const canGoNextDay = dayNumber < daysInMonth;
-  const isFutureDate = dayKey > getDayKey();
-
-  // Keep the editable day inside the dashboard's selected month.
-  useEffect(() => {
-    setDayKey(defaultDateForMonth(selectedMonthKey));
-  }, [selectedMonthKey]);
+  const entryDate = dateForMonth(selectedMonthKey);
 
   // Creates + selects a new parent category.
   function handleAddCategory() {
@@ -130,7 +109,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         source: 'manual',
         method: 'cash',
         type: 'withdrawal',
-        date: dayKeyToIso(dayKey),
+        date: entryDate,
       });
     } else {
       addExpense({
@@ -142,7 +121,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         source: 'manual',
         method,
         type: 'expense',
-        date: dayKeyToIso(dayKey),
+        date: entryDate,
       });
     }
 
@@ -191,30 +170,9 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         </Text>
       ) : null}
 
-      {period !== 'current' ? (
-        <MonthPeriodBanner
-          variant="callout"
-          message={
-            period === 'future'
-              ? `Saving into upcoming ${getMonthLabel(selectedMonthKey)}. Useful for planned bills.`
-              : `Saving into ${getMonthLabel(selectedMonthKey)}. You can change the day below.`
-          }
-        />
-      ) : null}
+      <MonthPeriodBanner monthKey={selectedMonthKey} context="save" />
 
       <Card>
-        <Text style={styles.label}>Date</Text>
-        <ChevronStepper
-          size="sm"
-          label={formatDayLabel(dayKey)}
-          hint={isFutureDate ? 'Future date' : undefined}
-          onPrevious={() => setDayKey(shiftDayInMonth(dayKey, -1))}
-          onNext={() => setDayKey(shiftDayInMonth(dayKey, 1))}
-          canGoPrevious={canGoPrevDay}
-          canGoNext={canGoNextDay}
-          style={styles.dateStepper}
-        />
-
         <TextInputField
           keyboardType="numeric"
           label="Amount (IDR)"
@@ -390,9 +348,6 @@ const styles = StyleSheet.create({
     color: colors.subText,
     fontWeight: '600',
     marginBottom: spacing.sm,
-  },
-  dateStepper: {
-    marginBottom: spacing.md,
   },
   methodRow: {
     flexDirection: 'row',
