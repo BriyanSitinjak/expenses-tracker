@@ -25,7 +25,13 @@ import {
   ParseReport,
   sampleBankStatementCsv,
 } from '../utils/import';
-import { describeTransferError, yieldToUI } from '../utils/transfer';
+import {
+  describeTransferError,
+  readBase64File,
+  readTextFile,
+  TransferStatus,
+  yieldToUI,
+} from '../utils/transfer';
 
 type ImportScreenProps = NativeStackScreenProps<RootStackParamList, 'Import'>;
 
@@ -38,21 +44,6 @@ const PICKER_TYPES = [
   '*/*',
 ];
 
-type ProgressState = {
-  title: string;
-  message: string;
-} | null;
-
-// Reads a picked text file across web and native.
-async function readFileText(uri: string): Promise<string> {
-  if (Platform.OS === 'web') {
-    const response = await fetch(uri);
-    return response.text();
-  }
-  const FileSystem = await import('expo-file-system/legacy');
-  return FileSystem.readAsStringAsync(uri);
-}
-
 // Reads a picked Excel file as base64 (native) or ArrayBuffer (web).
 async function readExcelPayload(
   uri: string
@@ -62,10 +53,7 @@ async function readExcelPayload(
     const data = await response.arrayBuffer();
     return { data, dataType: 'array' };
   }
-  const FileSystem = await import('expo-file-system/legacy');
-  const data = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  const data = await readBase64File(uri);
   return { data, dataType: 'base64' };
 }
 
@@ -75,7 +63,7 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
   const [report, setReport] = useState<ParseReport | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState<ProgressState>(null);
+  const [progress, setProgress] = useState<TransferStatus>(null);
 
   function ingest(result: ParseReport, name: string) {
     setReport(result);
@@ -84,8 +72,8 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
       Alert.alert(
         'No transactions found',
         result.format === 'backup'
-          ? 'This backup file has no valid rows. Export Excel or CSV from the app and try again.'
-          : 'We could not detect outgoing transactions. Use an app Excel/CSV backup, or a bank file with Date, Description and Amount (or Debit) columns.'
+          ? 'This backup file has no valid rows. Export a CSV from the app and try again.'
+          : 'We could not detect outgoing transactions. Use an app CSV backup, or a bank file with Date, Description and Amount (or Debit) columns.'
       );
     }
   }
@@ -93,7 +81,7 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
   async function handlePickFile() {
     try {
       setLoading(true);
-      setProgress({ title: 'Importing', message: 'Opening file picker…' });
+      setProgress({ title: 'Importing', message: 'Opening file picker…', step: 1, totalSteps: 3 });
       await yieldToUI();
 
       const DocumentPicker = await import('expo-document-picker');
@@ -116,17 +104,29 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
       setProgress({
         title: 'Reading file',
         message: isExcel ? `Parsing Excel: ${name}` : `Parsing CSV: ${name}`,
+        step: 2,
+        totalSteps: 3,
       });
       await yieldToUI();
 
       if (isExcel) {
         const { data, dataType } = await readExcelPayload(asset.uri);
-        setProgress({ title: 'Reading file', message: 'Detecting transactions…' });
+        setProgress({
+          title: 'Reading file',
+          message: 'Detecting transactions…',
+          step: 3,
+          totalSteps: 3,
+        });
         await yieldToUI();
         ingest(parseImportExcel(data, dataType), name);
       } else {
-        const text = await readFileText(asset.uri);
-        setProgress({ title: 'Reading file', message: 'Detecting transactions…' });
+        const text = await readTextFile(asset.uri);
+        setProgress({
+          title: 'Reading file',
+          message: 'Detecting transactions…',
+          step: 3,
+          totalSteps: 3,
+        });
         await yieldToUI();
         ingest(parseImportFile(text), name);
       }
@@ -135,7 +135,7 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
         'Import failed',
         describeTransferError(
           error,
-          'Could not read or parse that file. Try exporting a fresh Excel/CSV backup from this app.'
+          'Could not read or parse that file. Try exporting a fresh CSV backup from this app.'
         )
       );
     } finally {
@@ -154,6 +154,8 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
       setProgress({
         title: 'Saving import',
         message: `Adding ${report.drafts.length} transaction${report.drafts.length === 1 ? '' : 's'}…`,
+        step: 1,
+        totalSteps: 1,
       });
       await yieldToUI();
       const { added, skipped } = importExpenses(report.drafts);
@@ -195,9 +197,9 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
       <Card style={styles.infoCard}>
         <Text style={styles.infoTitle}>Import transactions</Text>
         <Text style={styles.infoText}>
-          Import an Excel (.xlsx) or CSV backup from this app, or a bank statement CSV. App backups
-          keep categories, payment method, and notes. Bank files need Date, Description and Amount
-          (or Debit) columns.
+          Import an Excel (.xlsx) or CSV backup from this app, or a bank statement CSV. App CSV
+          backups keep categories, payment method, and notes. Bank files need Date, Description and
+          Amount (or Debit) columns.
         </Text>
         <View style={styles.buttonRow}>
           <Button
@@ -275,6 +277,8 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
         visible={progress != null}
         title={progress?.title ?? ''}
         message={progress?.message ?? ''}
+        step={progress?.step}
+        totalSteps={progress?.totalSteps}
       />
     </View>
   );

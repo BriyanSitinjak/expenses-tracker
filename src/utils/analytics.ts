@@ -1,5 +1,5 @@
 import { Expense } from '../types';
-import { getDayKey, getMonthKey } from './date';
+import { getDayKey } from './date';
 
 // Totals spending per category, returned as [name, amount] sorted high to low.
 export function sumByCategory(expenses: Expense[]): [string, number][] {
@@ -98,44 +98,5 @@ export function trackingStats(expenses: Expense[]): {
   return {
     daysTracked: dayKeys.size,
     streak: computeStreak(dayKeys),
-  };
-}
-
-// Aggregated payment + category stats used by Excel export.
-export function paymentStats(expenses: Expense[]): {
-  totalSpent: number;
-  cashSpent: number;
-  debitSpent: number;
-  withdrawn: number;
-  cashOnHand: number;
-  byCategory: Record<string, number>;
-  byMonth: Record<string, number>;
-} {
-  const spending = onlyExpenses(expenses);
-  const totalSpent = sumAmount(spending);
-  const { cash: cashSpent, debit: debitSpent } = sumByMethod(expenses);
-
-  let withdrawn = 0;
-  const byCategory: Record<string, number> = {};
-  const byMonth: Record<string, number> = {};
-
-  for (const item of expenses) {
-    if (item.type === 'withdrawal') {
-      withdrawn += item.amount;
-      continue;
-    }
-    byCategory[item.category] = (byCategory[item.category] ?? 0) + item.amount;
-    const key = getMonthKey(new Date(item.date));
-    byMonth[key] = (byMonth[key] ?? 0) + item.amount;
-  }
-
-  return {
-    totalSpent,
-    cashSpent,
-    debitSpent,
-    withdrawn,
-    cashOnHand: withdrawn - cashSpent,
-    byCategory,
-    byMonth,
   };
 }

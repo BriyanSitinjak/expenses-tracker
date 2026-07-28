@@ -7,20 +7,32 @@ type ChevronStepperProps = {
   label: string;
   onPrevious: () => void;
   onNext: () => void;
+  disabled?: boolean;
   style?: ViewStyle;
 };
 
 // Shared previous/next control (month switcher).
-export function ChevronStepper({ label, onPrevious, onNext, style }: ChevronStepperProps) {
+export function ChevronStepper({
+  label,
+  onPrevious,
+  onNext,
+  disabled = false,
+  style,
+}: ChevronStepperProps) {
   return (
     <View style={[styles.row, style]}>
       <Pressable
         onPress={onPrevious}
+        disabled={disabled}
         hitSlop={8}
-        style={({ pressed }) => [styles.arrow, pressed && styles.arrowPressed]}
+        style={({ pressed }) => [
+          styles.arrow,
+          pressed && !disabled && styles.arrowPressed,
+          disabled && styles.arrowDisabled,
+        ]}
         accessibilityLabel="Previous"
       >
-        <Icon name="chevron-back" size={20} color={colors.text} />
+        <Icon name="chevron-back" size={20} color={disabled ? colors.muted : colors.text} />
       </Pressable>
 
       <View style={styles.center}>
@@ -29,11 +41,16 @@ export function ChevronStepper({ label, onPrevious, onNext, style }: ChevronStep
 
       <Pressable
         onPress={onNext}
+        disabled={disabled}
         hitSlop={8}
-        style={({ pressed }) => [styles.arrow, pressed && styles.arrowPressed]}
+        style={({ pressed }) => [
+          styles.arrow,
+          pressed && !disabled && styles.arrowPressed,
+          disabled && styles.arrowDisabled,
+        ]}
         accessibilityLabel="Next"
       >
-        <Icon name="chevron-forward" size={20} color={colors.text} />
+        <Icon name="chevron-forward" size={20} color={disabled ? colors.muted : colors.text} />
       </Pressable>
     </View>
   );
@@ -57,6 +74,9 @@ const styles = StyleSheet.create({
   },
   arrowPressed: {
     backgroundColor: colors.cardAlt,
+  },
+  arrowDisabled: {
+    opacity: 0.45,
   },
   center: {
     alignItems: 'center',

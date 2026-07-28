@@ -1,8 +1,17 @@
 import { Platform } from 'react-native';
 import { Expense } from '../types';
-import { ExportResult, getNativeFsModules, TransferProgress } from './transfer';
+import {
+  ExportResult,
+  preloadTransferModules,
+  reportTransferProgress,
+  resolveExportDirectory,
+  shareExportFile,
+  TransferProgress,
+  writeExportFile,
+  yieldToUI,
+} from './transfer';
 
-export const BACKUP_CSV_HEADERS = [
+const BACKUP_CSV_HEADERS = [
   'date',
   'amount',
   'category',
@@ -33,7 +42,6 @@ function escapeCsvField(value: string): string {
   return value;
 }
 
-// Flat row shape used by both CSV and Excel backup exports.
 function expenseToBackupRow(item: Expense): BackupRow {
   return {
     date: item.date,
@@ -48,7 +56,7 @@ function expenseToBackupRow(item: Expense): BackupRow {
   };
 }
 
-export function expensesToBackupRows(expenses: Expense[]): BackupRow[] {
+function expensesToBackupRows(expenses: Expense[]): BackupRow[] {
   return [...expenses]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .map(expenseToBackupRow);
@@ -80,17 +88,35 @@ function buildBackupCsv(expenses: Expense[]): string {
   return [header, ...rows].join('\n');
 }
 
+type BackupExportOptions = {
+  onProgress?: TransferProgress;
+  onBeforeShare?: () => void | Promise<void>;
+};
+
+const CSV_STEPS = 2;
+
 // Exports transactions as a shareable CSV backup file.
 export async function exportTransactionsBackup(
   expenses: Expense[],
-  onProgress?: TransferProgress
+  options: BackupExportOptions = {}
 ): Promise<ExportResult> {
-  onProgress?.('Building CSV backup…');
+  const { onProgress, onBeforeShare } = options;
+  preloadTransferModules();
+
+  await reportTransferProgress(onProgress, {
+    step: 1,
+    totalSteps: CSV_STEPS,
+    message: `Building CSV for ${expenses.length} transaction${expenses.length === 1 ? '' : 's'}…`,
+  });
   const csv = buildBackupCsv(expenses);
   const fileName = `expenses-backup-${new Date().toISOString().slice(0, 10)}.csv`;
 
   if (Platform.OS === 'web') {
-    onProgress?.('Downloading CSV file…');
+    await reportTransferProgress(onProgress, {
+      step: CSV_STEPS,
+      totalSteps: CSV_STEPS,
+      message: 'Downloading CSV file…',
+    });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -101,29 +127,27 @@ export async function exportTransactionsBackup(
     return { shared: true };
   }
 
-  onProgress?.('Saving file…');
-  const { FileSystem, Sharing } = await getNativeFsModules();
-  const directory = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
-  if (!directory) {
-    throw new Error('No writable directory available on this device.');
-  }
+  await reportTransferProgress(onProgress, {
+    step: 2,
+    totalSteps: CSV_STEPS,
+    message: 'Saving file…',
+  });
+  const directory = await resolveExportDirectory();
   const fileUri = `${directory}${fileName}`;
-  await FileSystem.writeAsStringAsync(fileUri, csv, {
-    encoding: FileSystem.EncodingType.UTF8,
+  await writeExportFile(fileUri, csv, 'utf8');
+
+  await onBeforeShare?.();
+  await yieldToUI(40);
+
+  const shareStatus = await shareExportFile(fileUri, {
+    mimeType: 'text/csv',
+    dialogTitle: 'Export backup',
+    UTI: 'public.comma-separated-values-text',
   });
 
-  const canShare = await Sharing.isAvailableAsync();
-  if (canShare) {
-    onProgress?.('Opening share sheet…');
-    await Sharing.shareAsync(fileUri, {
-      mimeType: 'text/csv',
-      dialogTitle: 'Export backup',
-      UTI: 'public.comma-separated-values-text',
-    });
-    return { fileUri, shared: true };
-  }
-
-  return { fileUri, shared: false };
+  if (shareStatus === 'unavailable') return { fileUri, shared: false };
+  if (shareStatus === 'dismissed') return { fileUri, shared: false, dismissed: true };
+  return { fileUri, shared: true };
 }
 
 // Returns true when CSV headers match the app's backup export format.

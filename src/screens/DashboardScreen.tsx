@@ -23,7 +23,7 @@ import { SectionTitle } from '../components/SectionTitle';
 import { TransactionRow } from '../components/TransactionRow';
 import { TransferStatusModal } from '../components/TransferStatusModal';
 import { colors, radius, spacing } from '../constants/theme';
-import { useExcelExport } from '../hooks/useExcelExport';
+import { useCsvExport } from '../hooks/useCsvExport';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { Expense } from '../types';
@@ -46,7 +46,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
     deleteExpense,
   } = useBudgetStore();
 
-  const { exporting, exportingBackup, exportExpenses, exportBackup, progress } = useExcelExport();
+  const { busy, exportCsv, progress } = useCsvExport();
   const [refreshing, setRefreshing] = useState(false);
 
   const periodRelation = monthRelation(selectedMonthKey);
@@ -66,43 +66,36 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const maxCategory = byCategory.length > 0 ? byCategory[0][1] : 0;
   const periodLabel =
     periodRelation === 'current' ? 'this month' : getMonthLabel(selectedMonthKey);
-  const exportBusy = exporting || exportingBackup;
 
   const onRefresh = useCallback(async () => {
+    if (busy) return;
     setRefreshing(true);
     try {
       await useBudgetStore.persist.rehydrate();
     } finally {
       setRefreshing(false);
     }
-  }, []);
-
-  function handleExport() {
-    Alert.alert('Export data', 'Both formats can be imported again later.', [
-      { text: 'Excel (.xlsx)', onPress: exportExpenses },
-      { text: 'CSV backup', onPress: exportBackup },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }
+  }, [busy]);
 
   const confirmDelete = useCallback(
     (id: string, label: string) => {
+      if (busy) return;
       Alert.alert('Delete transaction', `Remove "${label}"?`, [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: () => deleteExpense(id) },
       ]);
     },
-    [deleteExpense],
+    [busy, deleteExpense],
   );
 
   const renderItem: ListRenderItem<Expense> = useCallback(
     ({ item }) => (
       <TransactionRow
         item={item}
-        onLongPress={() => confirmDelete(item.id, item.merchant ?? item.category)}
+        onLongPress={busy ? undefined : () => confirmDelete(item.id, item.merchant ?? item.category)}
       />
     ),
-    [confirmDelete],
+    [busy, confirmDelete],
   );
 
   const listHeader = (
@@ -117,6 +110,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         onPrevious={() => shiftSelectedMonth(-1)}
         onNext={() => shiftSelectedMonth(1)}
         onGoToCurrent={goToCurrentMonth}
+        disabled={busy}
       />
 
       <MonthPeriodBanner monthKey={selectedMonthKey} />
@@ -131,24 +125,27 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         cash={cash}
         withdrawn={withdrawnThisMonth}
         cashSpent={cashSpentThisMonth}
-        onPressBudget={() => navigation.navigate('BudgetSetup')}
+        onPressBudget={() => {
+          if (!busy) navigation.navigate('BudgetSetup');
+        }}
       />
 
-      <View style={styles.toolRow}>
+      <View style={styles.toolRow} pointerEvents={busy ? 'none' : 'auto'}>
         <ActionCard
           title="Import"
           subtitle="Bring in a file"
           icon="cloud-download"
           iconColor={colors.accent}
           onPress={() => navigation.navigate('Import')}
+          disabled={busy}
         />
         <ActionCard
-          title={exportBusy ? 'Exporting…' : 'Export'}
-          subtitle="Save a backup"
+          title={busy ? 'Exporting…' : 'Export'}
+          subtitle={busy ? (progress?.message ?? 'Working…') : 'CSV backup'}
           icon="cloud-upload"
           iconColor={colors.primary}
-          onPress={handleExport}
-          disabled={exportBusy}
+          onPress={exportCsv}
+          disabled={busy}
         />
         <ActionCard
           title="Stats"
@@ -156,14 +153,19 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
           icon="stats-chart"
           iconColor={colors.success}
           onPress={() => navigation.navigate('Stats')}
+          disabled={busy}
         />
       </View>
 
       <AnimatedCard index={1} style={styles.section}>
         <View style={styles.sectionHeader}>
           <SectionTitle style={styles.sectionTitleInline}>Top Categories</SectionTitle>
-          <Pressable onPress={() => navigation.navigate('Stats')} hitSlop={8}>
-            <Text style={styles.link}>See all</Text>
+          <Pressable
+            onPress={() => navigation.navigate('Stats')}
+            hitSlop={8}
+            disabled={busy}
+          >
+            <Text style={[styles.link, busy && styles.linkDisabled]}>See all</Text>
           </Pressable>
         </View>
         {byCategory.length === 0 ? (
@@ -203,10 +205,13 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         ListEmptyComponent={listEmpty}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!busy}
+        pointerEvents={busy ? 'none' : 'auto'}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
+            enabled={!busy}
             tintColor={colors.accent}
             colors={[colors.accent]}
             title="Pull to refresh"
@@ -216,11 +221,15 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
       />
 
       <Pressable
-        onPress={() => navigation.navigate('AddExpense')}
+        onPress={() => {
+          if (!busy) navigation.navigate('AddExpense');
+        }}
+        disabled={busy}
         style={({ pressed }) => [
           styles.fab,
           { bottom: insets.bottom + spacing.lg },
-          pressed && styles.fabPressed,
+          pressed && !busy && styles.fabPressed,
+          busy && styles.fabDisabled,
         ]}
         accessibilityLabel="Add expense"
       >
@@ -231,6 +240,8 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         visible={progress != null}
         title={progress?.title ?? ''}
         message={progress?.message ?? ''}
+        step={progress?.step}
+        totalSteps={progress?.totalSteps}
       />
     </View>
   );
@@ -275,6 +286,9 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
   },
+  linkDisabled: {
+    opacity: 0.45,
+  },
   empty: {
     color: colors.subText,
   },
@@ -314,6 +328,9 @@ const styles = StyleSheet.create({
   fabPressed: {
     opacity: 0.9,
     transform: [{ scale: 0.97 }],
+  },
+  fabDisabled: {
+    opacity: 0.45,
   },
   fabLabel: {
     color: colors.onAccent,

@@ -10,6 +10,7 @@ type MonthSwitcherProps = {
   onPrevious: () => void;
   onNext: () => void;
   onGoToCurrent: () => void;
+  disabled?: boolean;
 };
 
 // Compact period control: month label + chevrons, still easy to scan.
@@ -19,17 +20,19 @@ export function MonthSwitcher({
   onPrevious,
   onNext,
   onGoToCurrent,
+  disabled = false,
 }: MonthSwitcherProps) {
   const relation = monthRelation(monthKey);
   const periodMeta =
     relation === 'current' ? 'This month' : relation === 'future' ? 'Upcoming' : 'Past period';
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, disabled && styles.wrapDisabled]} pointerEvents={disabled ? 'none' : 'auto'}>
       <ChevronStepper
         label={getMonthLabel(monthKey)}
         onPrevious={onPrevious}
         onNext={onNext}
+        disabled={disabled}
       />
       <View style={styles.metaRow}>
         <Text style={styles.meta}>
@@ -41,6 +44,7 @@ export function MonthSwitcher({
         {relation !== 'current' ? (
           <Pressable
             onPress={onGoToCurrent}
+            disabled={disabled}
             hitSlop={8}
             style={({ pressed }) => [styles.todayBtn, pressed && styles.todayPressed]}
           >
@@ -55,6 +59,9 @@ export function MonthSwitcher({
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.md,
+  },
+  wrapDisabled: {
+    opacity: 0.55,
   },
   metaRow: {
     alignItems: 'center',

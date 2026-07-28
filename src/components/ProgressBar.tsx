@@ -7,6 +7,7 @@ type ProgressBarProps = {
   color?: string;
   trackColor?: string;
   height?: number;
+  duration?: number;
 };
 
 // Animated horizontal progress bar with a smooth fill transition.
@@ -15,6 +16,7 @@ export function ProgressBar({
   color = colors.primary,
   trackColor = colors.track,
   height = 12,
+  duration = 900,
 }: ProgressBarProps) {
   const animated = useRef(new Animated.Value(0)).current;
   const clamped = Math.max(0, Math.min(1, progress));
@@ -22,11 +24,11 @@ export function ProgressBar({
   useEffect(() => {
     Animated.timing(animated, {
       toValue: clamped,
-      duration: 900,
+      duration,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
-  }, [clamped, animated]);
+  }, [clamped, animated, duration]);
 
   const width = animated.interpolate({
     inputRange: [0, 1],
