@@ -3,8 +3,7 @@ export function getMonthKey(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// Returns the first local calendar date for a month key in "YYYY-MM-DD" format.
-export function getFirstDayOfMonth(monthKey: string): string {
+function getFirstDayOfMonth(monthKey: string): string {
   return `${monthKey}-01`;
 }
 
@@ -13,8 +12,45 @@ export function defaultDateForMonth(monthKey: string): string {
   const today = new Date();
   const todayKey = getMonthKey(today);
   if (monthKey !== todayKey) return getFirstDayOfMonth(monthKey);
-
   return getDayKey(today);
+}
+
+// Number of calendar days in a month key ("YYYY-MM").
+export function getDaysInMonth(monthKey: string): number {
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Date(year, month, 0).getDate();
+}
+
+function dayKeyInMonth(monthKey: string, day: number): string {
+  const max = getDaysInMonth(monthKey);
+  const safeDay = Math.max(1, Math.min(day, max));
+  return `${monthKey}-${String(safeDay).padStart(2, '0')}`;
+}
+
+// Shifts a day key by N days, staying inside the same month.
+export function shiftDayInMonth(dayKey: string, delta: number): string {
+  const monthKey = dayKey.slice(0, 7);
+  const day = Number(dayKey.slice(8, 10));
+  return dayKeyInMonth(monthKey, day + delta);
+}
+
+// Human label for a day key, e.g. "28 Jul 2026".
+export function formatDayLabel(dayKey: string): string {
+  const [year, month, day] = dayKey.split('-').map(Number);
+  const date = new Date(year, (month ?? 1) - 1, day ?? 1);
+  return date.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+// How a month key relates to the real calendar month.
+export function monthRelation(monthKey: string): 'past' | 'current' | 'future' {
+  const current = getMonthKey();
+  if (monthKey < current) return 'past';
+  if (monthKey > current) return 'future';
+  return 'current';
 }
 
 // Shifts a month key by a number of months.
@@ -36,11 +72,6 @@ export function getMonthLabel(monthKey: string): string {
   const [year, month] = monthKey.split('-').map(Number);
   const date = new Date(year, (month ?? 1) - 1, 1);
   return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-}
-
-// Returns true when a month key matches the real calendar month.
-export function isCurrentMonth(monthKey: string): boolean {
-  return monthKey === getMonthKey();
 }
 
 // Converts a day key ("YYYY-MM-DD") to a stable local noon ISO timestamp.
@@ -66,15 +97,12 @@ export function parseFlexibleDate(raw: string): Date | null {
     let [a, b, c] = parts.map((part) => parseInt(part, 10));
 
     if (parts[0].length === 4) {
-      // YYYY/MM/DD
       return safeDate(a, b - 1, c);
     }
 
     if (c < 100) c += 2000;
 
-    // Heuristic: if first part > 12 it must be the day (DD/MM/YYYY).
     if (a > 12) return safeDate(c, b - 1, a);
-    // Otherwise default to DD/MM/YYYY (most common outside the US).
     return safeDate(c, b - 1, a);
   }
 
@@ -82,7 +110,6 @@ export function parseFlexibleDate(raw: string): Date | null {
   return Number.isNaN(fallback.getTime()) ? null : fallback;
 }
 
-// Builds a Date only when the values produce a real calendar date.
 function safeDate(year: number, monthIndex: number, day: number): Date | null {
   const date = new Date(year, monthIndex, day);
   return Number.isNaN(date.getTime()) ? null : date;

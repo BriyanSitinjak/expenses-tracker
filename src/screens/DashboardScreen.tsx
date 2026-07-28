@@ -28,7 +28,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { Expense } from '../types';
 import { budgetSnapshot, monthCashStats, sumByCategory } from '../utils/analytics';
-import { getMonthKey, getMonthLabel, isCurrentMonth } from '../utils/date';
+import { getMonthLabel, monthRelation } from '../utils/date';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -57,8 +57,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { exporting, exportingBackup, exportExpenses, exportBackup, progress } = useExcelExport();
   const [refreshing, setRefreshing] = useState(false);
 
-  const viewingCurrentMonth = isCurrentMonth(selectedMonthKey);
-  const canGoNext = selectedMonthKey < getMonthKey();
+  const periodRelation = monthRelation(selectedMonthKey);
 
   const monthExpenses = expensesForMonth(selectedMonthKey);
   const monthTransactions = transactionsForMonth(selectedMonthKey);
@@ -73,7 +72,8 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   const byCategory = useMemo(() => sumByCategory(monthExpenses), [monthExpenses]);
   const maxCategory = byCategory.length > 0 ? byCategory[0][1] : 0;
-  const periodLabel = viewingCurrentMonth ? 'this month' : getMonthLabel(selectedMonthKey);
+  const periodLabel =
+    periodRelation === 'current' ? 'this month' : getMonthLabel(selectedMonthKey);
   const exportBusy = exporting || exportingBackup;
 
   const onRefresh = useCallback(async () => {
@@ -126,12 +126,15 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         onPrevious={() => shiftSelectedMonth(-1)}
         onNext={() => shiftSelectedMonth(1)}
         onGoToCurrent={goToCurrentMonth}
-        canGoNext={canGoNext}
       />
 
-      {!viewingCurrentMonth ? (
+      {periodRelation !== 'current' ? (
         <MonthPeriodBanner
-          message={`Showing ${getMonthLabel(selectedMonthKey)} only. Cash on hand stays all-time.`}
+          message={
+            periodRelation === 'future'
+              ? `Planning ${getMonthLabel(selectedMonthKey)}. New entries are saved in this upcoming month.`
+              : `Showing ${getMonthLabel(selectedMonthKey)} only. Cash on hand stays all-time.`
+          }
         />
       ) : null}
 
@@ -200,7 +203,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
       <IconTile name="receipt" color={colors.muted} size="lg" elevated={false} />
       <Text style={styles.emptyTitle}>No transactions in this period</Text>
       <Text style={styles.emptyText}>
-        {viewingCurrentMonth
+        {periodRelation === 'current'
           ? 'Tap + below to add an expense, or use Import.'
           : `Nothing recorded for ${getMonthLabel(selectedMonthKey)}.`}
       </Text>

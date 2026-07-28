@@ -33,18 +33,14 @@ type BudgetActions = {
   renameCategory: (oldName: string, newName: string) => boolean;
   deleteCategory: (name: string) => void;
   deleteSubcategory: (parent: string, name: string) => void;
-  setSelectedMonthKey: (monthKey: string) => void;
   shiftSelectedMonth: (delta: number) => void;
   goToCurrentMonth: () => void;
-  // TECHDEBT: Expose in a settings/debug screen when needed.
-  resetAll: () => void;
 };
 
 type BudgetSelectors = {
   transactionsForMonth: (monthKey?: string) => Expense[];
   expensesForMonth: (monthKey?: string) => Expense[];
   totalSpent: (monthKey?: string) => number;
-  remaining: (monthKey?: string) => number;
   cashOnHand: () => number;
 };
 
@@ -294,33 +290,14 @@ export const useBudgetStore = create<BudgetStore>()(
         set((state) => ({ expenses: state.expenses.filter((item) => item.id !== id) }));
       },
 
-      // Sets which month the dashboard should display.
-      // TECHDEBT: Use for a month-picker jump when that UI is added.
-      setSelectedMonthKey: (monthKey) => {
-        set({ selectedMonthKey: monthKey });
-      },
-
-      // Moves the viewed month backward or forward (not beyond today).
+      // Moves the viewed month backward or forward.
       shiftSelectedMonth: (delta) => {
-        const next = shiftMonthKey(get().selectedMonthKey, delta);
-        if (next > getMonthKey()) return;
-        set({ selectedMonthKey: next });
+        set({ selectedMonthKey: shiftMonthKey(get().selectedMonthKey, delta) });
       },
 
       // Jumps back to the real current calendar month.
       goToCurrentMonth: () => {
         set({ selectedMonthKey: getMonthKey() });
-      },
-
-      // Clears all data back to a fresh state.
-      resetAll: () => {
-        set({
-          expenses: [],
-          monthlyBudget: 0,
-          categories: [...DEFAULT_CATEGORIES],
-          subcategories: { ...DEFAULT_SUBCATEGORIES },
-          selectedMonthKey: getMonthKey(),
-        });
       },
 
       // Returns ALL transactions for a month (expenses + withdrawals).
@@ -338,9 +315,6 @@ export const useBudgetStore = create<BudgetStore>()(
 
       // Total spent for a month (defaults to active month, excludes withdrawals).
       totalSpent: (monthKey) => sumSpent(get().expensesForMonth(monthKey)),
-
-      // Remaining budget for a month (can be negative).
-      remaining: (monthKey) => get().monthlyBudget - sumSpent(get().expensesForMonth(monthKey)),
 
       // Cash on hand = all cash withdrawn minus all cash spent (all-time).
       cashOnHand: () => computeCashOnHand(get().expenses),

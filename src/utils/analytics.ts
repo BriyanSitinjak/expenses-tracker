@@ -1,5 +1,5 @@
 import { Expense } from '../types';
-import { getDayKey } from './date';
+import { getDayKey, getMonthKey } from './date';
 
 // Totals spending per category, returned as [name, amount] sorted high to low.
 export function sumByCategory(expenses: Expense[]): [string, number][] {
@@ -125,7 +125,7 @@ export function paymentStats(expenses: Expense[]): {
       continue;
     }
     byCategory[item.category] = (byCategory[item.category] ?? 0) + item.amount;
-    const key = item.date.slice(0, 7);
+    const key = getMonthKey(new Date(item.date));
     byMonth[key] = (byMonth[key] ?? 0) + item.amount;
   }
 

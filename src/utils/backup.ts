@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { Expense } from '../types';
+import { ExportResult, getNativeFsModules, TransferProgress } from './transfer';
 
 export const BACKUP_CSV_HEADERS = [
   'date',
@@ -13,7 +14,7 @@ export const BACKUP_CSV_HEADERS = [
   'note',
 ] as const;
 
-export type BackupRow = {
+type BackupRow = {
   date: string;
   amount: number;
   category: string;
@@ -25,11 +26,6 @@ export type BackupRow = {
   note: string;
 };
 
-type ExportResult = {
-  fileUri?: string;
-  shared: boolean;
-};
-
 function escapeCsvField(value: string): string {
   if (/[",\n\r]/.test(value)) {
     return `"${value.replace(/"/g, '""')}"`;
@@ -38,7 +34,7 @@ function escapeCsvField(value: string): string {
 }
 
 // Flat row shape used by both CSV and Excel backup exports.
-export function expenseToBackupRow(item: Expense): BackupRow {
+function expenseToBackupRow(item: Expense): BackupRow {
   return {
     date: item.date,
     amount: Math.round(item.amount),
@@ -65,7 +61,7 @@ export function isBackupHeaders(headers: string[]): boolean {
 }
 
 // Builds a CSV backup that preserves all transaction fields for re-import.
-export function buildBackupCsv(expenses: Expense[]): string {
+function buildBackupCsv(expenses: Expense[]): string {
   const header = BACKUP_CSV_HEADERS.join(',');
   const rows = expensesToBackupRows(expenses).map((item) =>
     [
@@ -84,16 +80,10 @@ export function buildBackupCsv(expenses: Expense[]): string {
   return [header, ...rows].join('\n');
 }
 
-async function getNativeFsModules() {
-  const FileSystem = await import('expo-file-system/legacy');
-  const Sharing = await import('expo-sharing');
-  return { FileSystem, Sharing };
-}
-
 // Exports transactions as a shareable CSV backup file.
 export async function exportTransactionsBackup(
   expenses: Expense[],
-  onProgress?: (message: string) => void
+  onProgress?: TransferProgress
 ): Promise<ExportResult> {
   onProgress?.('Building CSV backup…');
   const csv = buildBackupCsv(expenses);

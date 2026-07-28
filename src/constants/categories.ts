@@ -16,7 +16,7 @@ export const FALLBACK_CATEGORY = 'Self-Reward';
 
 export const WITHDRAWAL_CATEGORY = 'Cash Withdrawal';
 
-export const WITHDRAWAL_KEYWORDS = [
+const WITHDRAWAL_KEYWORDS = [
   'atm',
   'cash withdrawal',
   'withdrawal',
@@ -31,7 +31,7 @@ export function isWithdrawal(description: string): boolean {
   return WITHDRAWAL_KEYWORDS.some((keyword) => text.includes(keyword));
 }
 
-export const CATEGORY_RULES: { category: string; keywords: string[] }[] = [
+const CATEGORY_RULES: { category: string; keywords: string[] }[] = [
   {
     category: 'Groceries',
     keywords: ['supermarket', 'grocery', 'groceries', 'mart', 'minimart', 'indomaret', 'alfamart', 'superindo', 'hypermart', 'hero', 'ranch market', 'market'],

@@ -1,3 +1,22 @@
+export type ExportResult = {
+  fileUri?: string;
+  shared: boolean;
+};
+
+export type TransferProgress = (message: string) => void;
+
+export type TransferStatus = {
+  title: string;
+  message: string;
+} | null;
+
+// Shared native file + share modules used by CSV and Excel exporters.
+export async function getNativeFsModules() {
+  const FileSystem = await import('expo-file-system/legacy');
+  const Sharing = await import('expo-sharing');
+  return { FileSystem, Sharing };
+}
+
 // Lets React paint a progress modal before heavy sync work (xlsx build, etc.).
 export function yieldToUI(ms = 40): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

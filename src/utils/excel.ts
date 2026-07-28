@@ -4,19 +4,7 @@ import { Expense } from '../types';
 import { paymentStats } from './analytics';
 import { BACKUP_CSV_HEADERS, expensesToBackupRows } from './backup';
 import { getMonthLabel } from './date';
-
-async function getNativeFsModules() {
-  const FileSystem = await import('expo-file-system/legacy');
-  const Sharing = await import('expo-sharing');
-  return { FileSystem, Sharing };
-}
-
-type ExportResult = {
-  fileUri?: string;
-  shared: boolean;
-};
-
-export type ExcelExportProgress = (message: string) => void;
+import { ExportResult, getNativeFsModules, TransferProgress } from './transfer';
 
 // Keeps spreadsheet cells as plain text (drops null bytes that can break writers).
 function cellText(value: unknown): string {
@@ -40,7 +28,7 @@ function safeLocaleTime(iso: string): string {
 export async function exportExpensesToExcel(
   expenses: Expense[],
   monthlyBudget: number,
-  onProgress?: ExcelExportProgress
+  onProgress?: TransferProgress
 ): Promise<ExportResult> {
   onProgress?.('Building spreadsheet…');
 

@@ -9,11 +9,10 @@ type CategoryBarProps = {
   amount: number;
   max: number;
   total?: number; // when provided, shows a percentage next to the amount
-  barHeight?: number;
 };
 
 // A single category row: color dot, name, amount (+ optional %) and a bar.
-export function CategoryBar({ name, amount, max, total, barHeight = 6 }: CategoryBarProps) {
+export function CategoryBar({ name, amount, max, total }: CategoryBarProps) {
   const color = colorForCategory(name);
   const percent = total && total > 0 ? Math.round((amount / total) * 100) : null;
 
@@ -29,7 +28,7 @@ export function CategoryBar({ name, amount, max, total, barHeight = 6 }: Categor
           {percent !== null ? <Text style={styles.pct}>{`  ${percent}%`}</Text> : null}
         </Text>
       </View>
-      <ProgressBar progress={max > 0 ? amount / max : 0} color={color} height={barHeight} />
+      <ProgressBar progress={max > 0 ? amount / max : 0} color={color} height={6} />
     </View>
   );
 }

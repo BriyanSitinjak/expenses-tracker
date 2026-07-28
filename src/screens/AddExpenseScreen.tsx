@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,9 +12,11 @@ import {
 } from 'react-native';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { ChevronStepper } from '../components/ChevronStepper';
 import { Icon, IconName } from '../components/Icon';
 import { InlineAddRow } from '../components/InlineAddRow';
 import { MonthPeriodBanner } from '../components/MonthPeriodBanner';
+import { AddChip, SelectChip } from '../components/SelectChip';
 import { TextInputField } from '../components/TextInputField';
 import { WITHDRAWAL_CATEGORY } from '../constants/categories';
 import {
@@ -28,7 +30,16 @@ import {
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { PaymentMethod } from '../types';
-import { defaultDateForMonth, getMonthLabel, isCurrentMonth, dayKeyToIso } from '../utils/date';
+import {
+  dayKeyToIso,
+  defaultDateForMonth,
+  formatDayLabel,
+  getDayKey,
+  getDaysInMonth,
+  getMonthLabel,
+  monthRelation,
+  shiftDayInMonth,
+} from '../utils/date';
 import { formatAmountInput, formatCurrency, parseAmountInput, stripAmountInput } from '../utils/format';
 
 type AddExpenseScreenProps = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
@@ -52,6 +63,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
   const [method, setMethod] = useState<PaymentMethod>('debit');
   const [category, setCategory] = useState(categories[0] ?? 'Food');
   const [subcategory, setSubcategory] = useState<string | undefined>(undefined);
+  const [dayKey, setDayKey] = useState(() => defaultDateForMonth(selectedMonthKey));
 
   const [addingCat, setAddingCat] = useState(false);
   const [newCategory, setNewCategory] = useState('');
@@ -59,12 +71,17 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
   const [newSub, setNewSub] = useState('');
 
   const subOptions = subcategories[category] ?? [];
-  const viewingCurrentMonth = isCurrentMonth(selectedMonthKey);
-  const defaultDate = defaultDateForMonth(selectedMonthKey);
+  const period = monthRelation(selectedMonthKey);
+  const dayNumber = Number(dayKey.slice(8, 10));
+  const daysInMonth = getDaysInMonth(selectedMonthKey);
+  const canGoPrevDay = dayNumber > 1;
+  const canGoNextDay = dayNumber < daysInMonth;
+  const isFutureDate = dayKey > getDayKey();
 
-  function expenseDate(): string {
-    return dayKeyToIso(defaultDate);
-  }
+  // Keep the editable day inside the dashboard's selected month.
+  useEffect(() => {
+    setDayKey(defaultDateForMonth(selectedMonthKey));
+  }, [selectedMonthKey]);
 
   // Creates + selects a new parent category.
   function handleAddCategory() {
@@ -113,7 +130,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         source: 'manual',
         method: 'cash',
         type: 'withdrawal',
-        date: expenseDate(),
+        date: dayKeyToIso(dayKey),
       });
     } else {
       addExpense({
@@ -125,7 +142,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         source: 'manual',
         method,
         type: 'expense',
-        date: expenseDate(),
+        date: dayKeyToIso(dayKey),
       });
     }
 
@@ -174,14 +191,30 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         </Text>
       ) : null}
 
-      {!viewingCurrentMonth ? (
+      {period !== 'current' ? (
         <MonthPeriodBanner
           variant="callout"
-          message={`You are viewing ${getMonthLabel(selectedMonthKey)}. New entries will be saved in that month.`}
+          message={
+            period === 'future'
+              ? `Saving into upcoming ${getMonthLabel(selectedMonthKey)}. Useful for planned bills.`
+              : `Saving into ${getMonthLabel(selectedMonthKey)}. You can change the day below.`
+          }
         />
       ) : null}
 
       <Card>
+        <Text style={styles.label}>Date</Text>
+        <ChevronStepper
+          size="sm"
+          label={formatDayLabel(dayKey)}
+          hint={isFutureDate ? 'Future date' : undefined}
+          onPrevious={() => setDayKey(shiftDayInMonth(dayKey, -1))}
+          onNext={() => setDayKey(shiftDayInMonth(dayKey, 1))}
+          canGoPrevious={canGoPrevDay}
+          canGoNext={canGoNextDay}
+          style={styles.dateStepper}
+        />
+
         <TextInputField
           keyboardType="numeric"
           label="Amount (IDR)"
@@ -232,33 +265,24 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
             <View style={styles.chipWrap}>
               {categories.map((item) => {
                 const active = item === category;
-                const color = colorForCategory(item);
                 return (
-                  <Pressable
+                  <SelectChip
                     key={item}
+                    label={item}
+                    color={colorForCategory(item)}
+                    active={active}
                     onPress={() => {
                       setCategory(item);
                       setSubcategory(undefined);
                       setAddingSub(false);
                     }}
-                    style={[
-                      styles.chip,
-                      active && {
-                        backgroundColor: withAlpha(color, 0.13),
-                        borderColor: color,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.chipDot, { backgroundColor: color }]} />
-                    <Text style={[styles.chipText, active && { color, fontWeight: '800' }]}>
-                      {item}
-                    </Text>
-                  </Pressable>
+                  />
                 );
               })}
-              <Pressable onPress={() => setAddingCat((v) => !v)} style={styles.addChip}>
-                <Text style={styles.addChipText}>{addingCat ? '× Cancel' : '+ New'}</Text>
-              </Pressable>
+              <AddChip
+                label={addingCat ? '× Cancel' : '+ New'}
+                onPress={() => setAddingCat((v) => !v)}
+              />
             </View>
 
             <InlineAddRow
@@ -273,29 +297,20 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
             <View style={styles.chipWrap}>
               {subOptions.map((item) => {
                 const active = item === subcategory;
-                const color = colorForSubcategory(item, category);
                 return (
-                  <Pressable
+                  <SelectChip
                     key={item}
+                    label={item}
+                    color={colorForSubcategory(item, category)}
+                    active={active}
                     onPress={() => setSubcategory(active ? undefined : item)}
-                    style={[
-                      styles.subChip,
-                      active && {
-                        backgroundColor: withAlpha(color, 0.13),
-                        borderColor: color,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.chipDot, { backgroundColor: color }]} />
-                    <Text style={[styles.subChipText, active && { color, fontWeight: '800' }]}>
-                      {item}
-                    </Text>
-                  </Pressable>
+                  />
                 );
               })}
-              <Pressable onPress={() => setAddingSub((v) => !v)} style={styles.addChip}>
-                <Text style={styles.addChipText}>{addingSub ? '× Cancel' : '+ New'}</Text>
-              </Pressable>
+              <AddChip
+                label={addingSub ? '× Cancel' : '+ New'}
+                onPress={() => setAddingSub((v) => !v)}
+              />
             </View>
 
             <InlineAddRow
@@ -376,6 +391,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: spacing.sm,
   },
+  dateStepper: {
+    marginBottom: spacing.md,
+  },
   methodRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -411,51 +429,5 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
     marginBottom: spacing.md,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.bgElevated,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  chipDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  chipText: {
-    color: colors.text,
-  },
-  subChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.bgElevated,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  subChipText: {
-    color: colors.subText,
-  },
-  addChip: {
-    backgroundColor: 'transparent',
-    borderColor: colors.primary,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  addChipText: {
-    color: colors.primary,
-    fontWeight: '800',
   },
 });

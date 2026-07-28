@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { colors, spacing, surface } from '../constants/theme';
 import { IconName } from './Icon';
 import { IconTile } from './IconTile';
@@ -9,7 +9,6 @@ type MetricTileProps = {
   label: string;
   value: string;
   tone?: string;
-  style?: ViewStyle;
 };
 
 // Compact non-pressable metric card (icon + value + label).
@@ -18,10 +17,9 @@ export function MetricTile({
   label,
   value,
   tone = colors.primary,
-  style,
 }: MetricTileProps) {
   return (
-    <View style={[styles.tile, style]}>
+    <View style={styles.tile}>
       <IconTile name={icon} color={tone} size="sm" />
       <Text style={styles.value}>{value}</Text>
       <Text style={styles.label}>{label}</Text>

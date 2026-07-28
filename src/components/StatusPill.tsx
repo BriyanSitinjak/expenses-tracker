@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, withAlpha } from '../constants/theme';
+import { radius, spacing, withAlpha } from '../constants/theme';
 
 type StatusPillProps = {
   label: string;

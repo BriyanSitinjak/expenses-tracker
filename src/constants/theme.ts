@@ -87,7 +87,7 @@ const SUBCATEGORY_PALETTE = [
 
 // Stable accent color for the built-in categories (all from CATEGORY_PALETTE).
 // Legacy keys are kept so older persisted category names still get stable colors.
-export const categoryColors: Record<string, string> = {
+const categoryColors: Record<string, string> = {
   Food: '#D6765D',
   Groceries: '#C4964A',
   Transport: '#A67C52',

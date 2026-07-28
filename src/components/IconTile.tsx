@@ -10,7 +10,6 @@ type IconTileProps = {
   color: string;
   size?: IconTileSize;
   elevated?: boolean;
-  iconSize?: number;
 };
 
 const TILE_SIZE: Record<IconTileSize, number> = {
@@ -26,13 +25,7 @@ const ICON_SIZE: Record<IconTileSize, number> = {
 };
 
 // Shared solid icon square used across action cards, stats, and empty states.
-export function IconTile({
-  name,
-  color,
-  size = 'md',
-  elevated = true,
-  iconSize,
-}: IconTileProps) {
+export function IconTile({ name, color, size = 'md', elevated = true }: IconTileProps) {
   const dimension = TILE_SIZE[size];
 
   return (
@@ -48,7 +41,7 @@ export function IconTile({
         elevated ? shadow('sm') : null,
       ]}
     >
-      <Icon name={name} size={iconSize ?? ICON_SIZE[size]} color={colors.onAccent} />
+      <Icon name={name} size={ICON_SIZE[size]} color={colors.onAccent} />
     </View>
   );
 }

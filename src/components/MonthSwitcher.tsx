@@ -1,8 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../constants/theme';
-import { getMonthLabel, isCurrentMonth } from '../utils/date';
-import { Icon } from './Icon';
+import { colors, spacing } from '../constants/theme';
+import { getMonthLabel, monthRelation } from '../utils/date';
+import { ChevronStepper } from './ChevronStepper';
 
 type MonthSwitcherProps = {
   monthKey: string;
@@ -10,7 +10,6 @@ type MonthSwitcherProps = {
   onPrevious: () => void;
   onNext: () => void;
   onGoToCurrent: () => void;
-  canGoNext: boolean;
 };
 
 // Compact period control: month label + chevrons, still easy to scan.
@@ -20,51 +19,25 @@ export function MonthSwitcher({
   onPrevious,
   onNext,
   onGoToCurrent,
-  canGoNext,
 }: MonthSwitcherProps) {
-  const viewingCurrentMonth = isCurrentMonth(monthKey);
+  const relation = monthRelation(monthKey);
+  const periodMeta =
+    relation === 'current' ? 'This month' : relation === 'future' ? 'Upcoming' : 'Past period';
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.row}>
-        <Pressable
-          onPress={onPrevious}
-          hitSlop={10}
-          style={({ pressed }) => [styles.arrowBtn, pressed && styles.arrowPressed]}
-          accessibilityLabel="Previous month"
-        >
-          <Icon name="chevron-back" size={20} color={colors.text} />
-        </Pressable>
+      <ChevronStepper
+        label={getMonthLabel(monthKey)}
+        onPrevious={onPrevious}
+        onNext={onNext}
+      />
+      <Text style={styles.meta}>
+        {periodMeta}
+        {' · '}
+        {transactionCount} txn{transactionCount === 1 ? '' : 's'}
+      </Text>
 
-        <View style={styles.center}>
-          <Text style={styles.month}>{getMonthLabel(monthKey)}</Text>
-          <Text style={styles.meta}>
-            {viewingCurrentMonth ? 'This month' : 'Past period'}
-            {' · '}
-            {transactionCount} txn{transactionCount === 1 ? '' : 's'}
-          </Text>
-        </View>
-
-        <Pressable
-          onPress={onNext}
-          disabled={!canGoNext}
-          hitSlop={10}
-          style={({ pressed }) => [
-            styles.arrowBtn,
-            !canGoNext && styles.arrowDisabled,
-            pressed && canGoNext && styles.arrowPressed,
-          ]}
-          accessibilityLabel="Next month"
-        >
-          <Icon
-            name="chevron-forward"
-            size={20}
-            color={canGoNext ? colors.text : colors.muted}
-          />
-        </Pressable>
-      </View>
-
-      {!viewingCurrentMonth ? (
+      {relation !== 'current' ? (
         <Pressable
           onPress={onGoToCurrent}
           hitSlop={8}
@@ -81,41 +54,10 @@ const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.md,
   },
-  row: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  arrowBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  arrowPressed: {
-    backgroundColor: colors.cardAlt,
-  },
-  arrowDisabled: {
-    opacity: 0.4,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  month: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
   meta: {
     color: colors.subText,
     fontSize: 12,
-    marginTop: 2,
+    marginTop: spacing.xs,
     textAlign: 'center',
   },
   todayLink: {

@@ -3,12 +3,7 @@ import { Alert } from 'react-native';
 import { useBudgetStore } from '../store/budgetStore';
 import { exportTransactionsBackup } from '../utils/backup';
 import { exportExpensesToExcel } from '../utils/excel';
-import { describeTransferError, yieldToUI } from '../utils/transfer';
-
-export type ExportProgress = {
-  title: string;
-  message: string;
-} | null;
+import { describeTransferError, TransferStatus, yieldToUI } from '../utils/transfer';
 
 function guardEmpty(expenses: { length: number }): boolean {
   if (expenses.length === 0) {
@@ -24,7 +19,7 @@ export function useExcelExport() {
   const monthlyBudget = useBudgetStore((state) => state.monthlyBudget);
   const [exporting, setExporting] = useState(false);
   const [exportingBackup, setExportingBackup] = useState(false);
-  const [progress, setProgress] = useState<ExportProgress>(null);
+  const [progress, setProgress] = useState<TransferStatus>(null);
 
   const showProgress = useCallback((title: string, message: string) => {
     setProgress({ title, message });
