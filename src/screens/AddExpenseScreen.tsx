@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -41,10 +41,20 @@ const METHODS: { key: PaymentMethod; label: string; icon: IconName }[] = [
   { key: 'cash', label: 'Cash', icon: 'cash' },
 ];
 
-// Screen to create a new expense or a cash withdrawal (transfer).
-export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
-  const { addExpense, addCategory, addSubcategory, categories, subcategories, cashOnHand, selectedMonthKey } =
-    useBudgetStore();
+// Screen to create or edit an expense / cash withdrawal.
+export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
+  const expenseId = route.params?.expenseId;
+  const {
+    addExpense,
+    updateExpense,
+    addCategory,
+    addSubcategory,
+    categories,
+    subcategories,
+    cashOnHand,
+    selectedMonthKey,
+    expenses,
+  } = useBudgetStore();
 
   const [mode, setMode] = useState<Mode>('expense');
   const [amount, setAmount] = useState('');
@@ -59,8 +69,31 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
   const [addingSub, setAddingSub] = useState(false);
   const [newSub, setNewSub] = useState('');
 
+  // Prefill fields when opening an existing transaction.
+  useEffect(() => {
+    if (!expenseId) return;
+
+    const found = useBudgetStore.getState().expenses.find((item) => item.id === expenseId);
+    if (!found) {
+      Alert.alert('Not found', 'This transaction no longer exists.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+      return;
+    }
+
+    setMode(found.type === 'withdrawal' ? 'withdrawal' : 'expense');
+    setAmount(formatAmountInput(String(Math.round(found.amount))));
+    setMerchant(found.merchant ?? '');
+    setNote(found.note ?? '');
+    setMethod(found.method);
+    setCategory(found.category || (useBudgetStore.getState().categories[0] ?? 'Food'));
+    setSubcategory(found.subcategory);
+  }, [expenseId, navigation]);
+
+  const editing = expenseId ? expenses.find((item) => item.id === expenseId) : undefined;
+  const isEdit = Boolean(expenseId);
   const subOptions = subcategories[category] ?? [];
-  const entryDate = dateForMonth(selectedMonthKey);
+  const entryDate = isEdit && editing ? editing.date : dateForMonth(selectedMonthKey);
 
   // Creates + selects a new parent category.
   function handleAddCategory() {
@@ -92,7 +125,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
     setAmount(digits ? formatAmountInput(digits) : '');
   }
 
-  // Validates and saves the transaction, then returns to the dashboard.
+  // Validates and saves (create or update), then returns to the previous screen.
   function handleSave() {
     const parsedAmount = parseAmountInput(amount);
     if (!parsedAmount || parsedAmount <= 0) {
@@ -100,7 +133,40 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
       return;
     }
 
-    if (mode === 'withdrawal') {
+    if (expenseId) {
+      if (!editing) {
+        Alert.alert('Not found', 'This transaction no longer exists.');
+        return;
+      }
+
+      const ok =
+        mode === 'withdrawal'
+          ? updateExpense(editing.id, {
+              amount: parsedAmount,
+              merchant: merchant.trim() || 'Cash withdrawal',
+              note: note.trim() || undefined,
+              type: 'withdrawal',
+              method: 'cash',
+              category: WITHDRAWAL_CATEGORY,
+              subcategory: undefined,
+              date: editing.date,
+            })
+          : updateExpense(editing.id, {
+              amount: parsedAmount,
+              category,
+              subcategory,
+              merchant: merchant.trim() || undefined,
+              note: note.trim() || undefined,
+              method,
+              type: 'expense',
+              date: editing.date,
+            });
+
+      if (!ok) {
+        Alert.alert('Could not update', 'Please check the fields and try again.');
+        return;
+      }
+    } else if (mode === 'withdrawal') {
       addExpense({
         amount: parsedAmount,
         category: WITHDRAWAL_CATEGORY,
@@ -139,29 +205,31 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-      <View style={styles.segment}>
-        {(['expense', 'withdrawal'] as Mode[]).map((item) => {
-          const active = item === mode;
-          return (
-            <Pressable
-              key={item}
-              onPress={() => setMode(item)}
-              style={[styles.segmentBtn, active && styles.segmentActive]}
-            >
-              <View style={styles.segmentContent}>
-                <Icon
-                  name={item === 'expense' ? 'receipt' : 'arrow-up'}
-                  size={16}
-                  color={active ? colors.onAccent : colors.subText}
-                />
-                <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                  {item === 'expense' ? 'Expense' : 'Withdraw cash'}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+      {!isEdit ? (
+        <View style={styles.segment}>
+          {(['expense', 'withdrawal'] as Mode[]).map((item) => {
+            const active = item === mode;
+            return (
+              <Pressable
+                key={item}
+                onPress={() => setMode(item)}
+                style={[styles.segmentBtn, active && styles.segmentActive]}
+              >
+                <View style={styles.segmentContent}>
+                  <Icon
+                    name={item === 'expense' ? 'receipt' : 'arrow-up'}
+                    size={16}
+                    color={active ? colors.onAccent : colors.subText}
+                  />
+                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                    {item === 'expense' ? 'Expense' : 'Withdraw cash'}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
 
       {mode === 'withdrawal' ? (
         <Text style={styles.hint}>
@@ -170,7 +238,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         </Text>
       ) : null}
 
-      <MonthPeriodBanner monthKey={selectedMonthKey} context="save" />
+      {!isEdit ? <MonthPeriodBanner monthKey={selectedMonthKey} context="save" /> : null}
 
       <Card>
         <TextInputField
@@ -290,7 +358,15 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
 
         <Button
           icon={mode === 'withdrawal' ? 'arrow-up' : 'checkmark'}
-          label={mode === 'withdrawal' ? 'Save Withdrawal' : 'Save Expense'}
+          label={
+            isEdit
+              ? mode === 'withdrawal'
+                ? 'Update Withdrawal'
+                : 'Update Expense'
+              : mode === 'withdrawal'
+                ? 'Save Withdrawal'
+                : 'Save Expense'
+          }
           onPress={handleSave}
         />
       </Card>

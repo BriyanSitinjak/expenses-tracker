@@ -1,5 +1,4 @@
 import { Expense } from '../types';
-import { getDayKey } from './date';
 
 // Totals spending per category, returned as [name, amount] sorted high to low.
 export function sumByCategory(expenses: Expense[]): [string, number][] {
@@ -16,8 +15,8 @@ export function sumAmount(items: { amount: number }[]): number {
 }
 
 // Keeps only real spending rows (excludes cash withdrawals).
-export function onlyExpenses(expenses: Expense[]): Expense[] {
-  return expenses.filter((item) => item.type === 'expense');
+export function onlyExpenses<T extends { type: Expense['type'] }>(items: T[]): T[] {
+  return items.filter((item) => item.type === 'expense');
 }
 
 // Totals cash vs debit spending for expense rows.
@@ -31,8 +30,8 @@ export function sumByMethod(expenses: Expense[]): { cash: number; debit: number 
   return { cash, debit };
 }
 
-// Monthly cash movement: withdrawals and cash spending in the selected period.
-export function monthCashStats(transactions: Expense[]): {
+// Cash movement for a set of transactions: withdrawals vs cash spending.
+function cashMovementStats(transactions: Expense[]): {
   withdrawn: number;
   cashSpent: number;
 } {
@@ -47,7 +46,7 @@ export function monthCashStats(transactions: Expense[]): {
 
 // All-time cash on hand = withdrawals minus cash spending.
 export function computeCashOnHand(expenses: Expense[]): number {
-  const { withdrawn, cashSpent } = monthCashStats(expenses);
+  const { withdrawn, cashSpent } = cashMovementStats(expenses);
   return withdrawn - cashSpent;
 }
 
@@ -62,41 +61,5 @@ export function budgetSnapshot(spent: number, monthlyBudget: number): {
     remaining,
     overBudget: remaining < 0,
     usage: monthlyBudget > 0 ? spent / monthlyBudget : 0,
-  };
-}
-
-// Active day streak ending today (or yesterday if today is empty).
-function computeStreak(dayKeys: Set<string>): number {
-  if (dayKeys.size === 0) return 0;
-
-  const cursor = new Date();
-  const todayKey = getDayKey(cursor);
-
-  if (!dayKeys.has(todayKey)) {
-    cursor.setDate(cursor.getDate() - 1);
-    if (!dayKeys.has(getDayKey(cursor))) return 0;
-  }
-
-  let streak = 0;
-  while (dayKeys.has(getDayKey(cursor))) {
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-
-  return streak;
-}
-
-// Lightweight tracking metrics used by the Stats screen.
-export function trackingStats(expenses: Expense[]): {
-  daysTracked: number;
-  streak: number;
-} {
-  const dayKeys = new Set<string>();
-  for (const item of expenses) {
-    dayKeys.add(getDayKey(new Date(item.date)));
-  }
-  return {
-    daysTracked: dayKeys.size,
-    streak: computeStreak(dayKeys),
   };
 }

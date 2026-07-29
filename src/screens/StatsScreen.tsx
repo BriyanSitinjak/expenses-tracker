@@ -2,58 +2,57 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AnimatedCard } from '../components/AnimatedCard';
-import { CategoryBar } from '../components/CategoryBar';
+import { CategoryBreakdownList } from '../components/CategoryBreakdownList';
+import { CategoryShareChart } from '../components/CategoryShareChart';
 import { IconTile } from '../components/IconTile';
-import { MetricTile } from '../components/MetricTile';
 import { ProgressBar } from '../components/ProgressBar';
 import { SectionTitle } from '../components/SectionTitle';
 import { colors, spacing } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
-import { onlyExpenses, sumByCategory, sumByMethod, trackingStats } from '../utils/analytics';
+import { onlyExpenses, sumAmount, sumByCategory, sumByMethod } from '../utils/analytics';
 import { formatCurrency } from '../utils/format';
 
 type StatsScreenProps = NativeStackScreenProps<RootStackParamList, 'Stats'>;
 
-// Lightweight all-time stats: totals, payment split, and full category breakdown.
-export function StatsScreen(_: StatsScreenProps) {
+// All-time stats: share overview, category bars, cash split, and payment mix.
+export function StatsScreen({ navigation }: StatsScreenProps) {
   const { expenses, cashOnHand } = useBudgetStore();
 
   const onlyExpenseRows = useMemo(() => onlyExpenses(expenses), [expenses]);
-  const tracking = useMemo(() => trackingStats(expenses), [expenses]);
   const byCategory = useMemo(() => sumByCategory(onlyExpenseRows), [onlyExpenseRows]);
   const byMethod = useMemo(() => sumByMethod(expenses), [expenses]);
 
   const cash = cashOnHand();
   const methodTotal = byMethod.cash + byMethod.debit;
-  const total = byCategory.reduce((sum, [, amount]) => sum + amount, 0);
-  const maxCategory = byCategory.length > 0 ? byCategory[0][1] : 0;
+  const total = sumAmount(onlyExpenseRows);
+
+  function openCategory(category: string) {
+    navigation.navigate('CategoryDetail', { category });
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.statRow}>
-        <MetricTile
-          icon="receipt"
-          label="Transactions"
-          value={String(expenses.length)}
-          tone={colors.primary}
+      <SectionTitle>Spending overview</SectionTitle>
+      <AnimatedCard index={0} style={styles.block}>
+        <Text style={styles.txnHint}>
+          {expenses.length} transaction{expenses.length === 1 ? '' : 's'} all-time
+        </Text>
+        <CategoryShareChart items={byCategory} total={total} />
+      </AnimatedCard>
+
+      <SectionTitle>By category</SectionTitle>
+      <AnimatedCard index={1} style={styles.block}>
+        <CategoryBreakdownList
+          items={byCategory}
+          total={total}
+          emptyText="No spending data yet."
+          onPressCategory={openCategory}
         />
-        <MetricTile
-          icon="calendar"
-          label="Days tracked"
-          value={String(tracking.daysTracked)}
-          tone={colors.accent}
-        />
-        <MetricTile
-          icon="flame"
-          label="Streak"
-          value={`${tracking.streak}d`}
-          tone={colors.warning}
-        />
-      </View>
+      </AnimatedCard>
 
       <SectionTitle>Cash & payments</SectionTitle>
-      <AnimatedCard index={0} style={styles.block}>
+      <AnimatedCard index={2} style={styles.block}>
         <View style={styles.cashRow}>
           <View>
             <Text style={styles.cashLabel}>Cash on hand</Text>
@@ -84,17 +83,6 @@ export function StatsScreen(_: StatsScreenProps) {
         </Text>
       </AnimatedCard>
 
-      <SectionTitle>Spending by category</SectionTitle>
-      <AnimatedCard index={1} style={styles.block}>
-        {byCategory.length === 0 ? (
-          <Text style={styles.empty}>No spending data yet.</Text>
-        ) : (
-          byCategory.map(([name, amount]) => (
-            <CategoryBar key={name} name={name} amount={amount} max={maxCategory} total={total} />
-          ))
-        )}
-      </AnimatedCard>
-
       <Text style={styles.footnote}>All-time totals · export lives on the dashboard</Text>
     </ScrollView>
   );
@@ -109,13 +97,14 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
   },
-  statRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
   block: {
     marginBottom: spacing.lg,
+  },
+  txnHint: {
+    color: colors.subText,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: spacing.md,
   },
   cashRow: {
     alignItems: 'center',
@@ -153,9 +142,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 12,
     marginTop: spacing.sm,
-  },
-  empty: {
-    color: colors.subText,
   },
   footnote: {
     color: colors.muted,

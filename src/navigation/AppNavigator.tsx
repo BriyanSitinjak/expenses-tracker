@@ -5,6 +5,7 @@ import { Icon } from '../components/Icon';
 import { colors } from '../constants/theme';
 import { AddExpenseScreen } from '../screens/AddExpenseScreen';
 import { BudgetSetupScreen } from '../screens/BudgetSetupScreen';
+import { CategoryDetailScreen } from '../screens/CategoryDetailScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ImportScreen } from '../screens/ImportScreen';
 import { ManageCategoriesScreen } from '../screens/ManageCategoriesScreen';
@@ -12,11 +13,12 @@ import { StatsScreen } from '../screens/StatsScreen';
 
 export type RootStackParamList = {
   Dashboard: undefined;
-  AddExpense: undefined;
+  AddExpense: { expenseId?: string } | undefined;
   BudgetSetup: undefined;
   Import: undefined;
   Stats: undefined;
   Manage: undefined;
+  CategoryDetail: { category: string; monthKey?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -48,7 +50,10 @@ export function AppNavigator() {
       <Stack.Screen
         component={AddExpenseScreen}
         name="AddExpense"
-        options={{ title: 'Add Expense', presentation: 'modal' }}
+        options={({ route }) => ({
+          title: route.params?.expenseId ? 'Edit Expense' : 'Add Expense',
+          presentation: 'modal',
+        })}
       />
       <Stack.Screen
         component={BudgetSetupScreen}
@@ -64,6 +69,11 @@ export function AppNavigator() {
         component={StatsScreen}
         name="Stats"
         options={{ title: 'Stats' }}
+      />
+      <Stack.Screen
+        component={CategoryDetailScreen}
+        name="CategoryDetail"
+        options={{ title: 'Category' }}
       />
       <Stack.Screen
         component={ManageCategoriesScreen}

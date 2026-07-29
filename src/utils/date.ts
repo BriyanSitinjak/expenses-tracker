@@ -36,7 +36,7 @@ export function shiftMonthKey(monthKey: string, delta: number): string {
 }
 
 // Returns a local day key in "YYYY-MM-DD" format.
-export function getDayKey(date = new Date()): string {
+function getDayKey(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
     date.getDate()
   ).padStart(2, '0')}`;

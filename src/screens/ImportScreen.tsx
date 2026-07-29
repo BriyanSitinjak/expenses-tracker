@@ -17,6 +17,7 @@ import { colors, spacing } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { DraftExpense } from '../types';
+import { onlyExpenses, sumAmount } from '../utils/analytics';
 import { formatCurrency } from '../utils/format';
 import {
   isExcelFileName,
@@ -187,9 +188,9 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
   }
 
   const drafts = report?.drafts ?? [];
-  const expenseDrafts = drafts.filter((item) => item.type === 'expense');
+  const expenseDrafts = onlyExpenses(drafts);
   const expenseCount = expenseDrafts.length;
-  const spendTotal = expenseDrafts.reduce((sum, item) => sum + item.amount, 0);
+  const spendTotal = sumAmount(expenseDrafts);
 
   const listHeader = (
     <View>

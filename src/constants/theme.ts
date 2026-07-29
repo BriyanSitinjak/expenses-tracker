@@ -155,7 +155,7 @@ export function shadow(level: 'sm' | 'md' = 'md'): ViewStyle {
   }) as ViewStyle;
 }
 
-// Shared card/surface chrome used by cards, action tiles, and metric tiles.
+// Shared card/surface chrome used by cards and action tiles.
 export function surface(
   level: 'sm' | 'md' = 'md',
   options?: { radius?: keyof typeof radius }

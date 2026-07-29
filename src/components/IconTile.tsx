@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { colors, radius, shadow } from '../constants/theme';
 import { Icon, IconName } from './Icon';
 
-type IconTileSize = 'sm' | 'md' | 'lg';
+type IconTileSize = 'md' | 'lg';
 
 type IconTileProps = {
   name: IconName;
@@ -13,13 +13,11 @@ type IconTileProps = {
 };
 
 const TILE_SIZE: Record<IconTileSize, number> = {
-  sm: 32,
   md: 40,
   lg: 44,
 };
 
 const ICON_SIZE: Record<IconTileSize, number> = {
-  sm: 16,
   md: 20,
   lg: 22,
 };
@@ -36,7 +34,7 @@ export function IconTile({ name, color, size = 'md', elevated = true }: IconTile
           backgroundColor: color,
           width: dimension,
           height: dimension,
-          borderRadius: size === 'sm' ? radius.sm : radius.md,
+          borderRadius: radius.md,
         },
         elevated ? shadow('sm') : null,
       ]}

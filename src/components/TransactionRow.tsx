@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   colorForCategory,
   colorForSubcategory,
@@ -13,13 +13,13 @@ import { formatCurrency } from '../utils/format';
 
 type TransactionRowData = Pick<
   Expense,
-  'category' | 'subcategory' | 'merchant' | 'note' | 'date' | 'amount' | 'type' | 'method' | 'source'
+  'category' | 'subcategory' | 'merchant' | 'note' | 'date' | 'amount' | 'type' | 'method'
 >;
 
 type TransactionRowProps = {
   item: TransactionRowData;
+  onPress?: () => void;
   onLongPress?: () => void;
-  style?: ViewStyle;
   compact?: boolean;
 };
 
@@ -49,7 +49,7 @@ function methodStyles(method: PaymentMethod, isWithdrawal: boolean) {
 }
 
 // Shared transaction list row for dashboard and import preview.
-export function TransactionRow({ item, onLongPress, style, compact }: TransactionRowProps) {
+export function TransactionRow({ item, onPress, onLongPress, compact }: TransactionRowProps) {
   const isWithdrawal = item.type === 'withdrawal';
   const categoryColor = isWithdrawal ? colors.muted : colorForCategory(item.category);
   const subcategoryColor = item.subcategory
@@ -134,11 +134,12 @@ export function TransactionRow({ item, onLongPress, style, compact }: Transactio
     </>
   );
 
-  const rowStyle = [styles.row, !compact && payment.row, style];
+  const rowStyle = [styles.row, !compact && payment.row];
 
-  if (onLongPress) {
+  if (onPress || onLongPress) {
     return (
       <Pressable
+        onPress={onPress}
         onLongPress={onLongPress}
         style={({ pressed }) => [rowStyle, pressed && styles.pressed]}
       >

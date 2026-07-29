@@ -1,22 +1,25 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Alert,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
   ListRenderItem,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionCard } from '../components/ActionCard';
 import { AnimatedCard } from '../components/AnimatedCard';
 import { BudgetHeroCard } from '../components/BudgetHeroCard';
-import { CategoryBar } from '../components/CategoryBar';
+import { CategoryBreakdownList } from '../components/CategoryBreakdownList';
+import { EmptyState } from '../components/EmptyState';
 import { Icon } from '../components/Icon';
-import { IconTile } from '../components/IconTile';
 import { MonthPeriodBanner } from '../components/MonthPeriodBanner';
 import { MonthSwitcher } from '../components/MonthSwitcher';
 import { SectionTitle } from '../components/SectionTitle';
@@ -27,10 +30,28 @@ import { useCsvExport } from '../hooks/useCsvExport';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { Expense } from '../types';
-import { budgetSnapshot, monthCashStats, sumByCategory } from '../utils/analytics';
+import { budgetSnapshot, sumByCategory } from '../utils/analytics';
+import { confirmDeleteExpense } from '../utils/confirmDelete';
 import { formatTodayLabel, getMonthLabel, monthRelation } from '../utils/date';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
+
+function matchesSearch(item: Expense, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [
+    item.merchant,
+    item.category,
+    item.subcategory,
+    item.note,
+    item.method,
+    item.type,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(q);
+}
 
 export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const insets = useSafeAreaInsets();
@@ -42,12 +63,13 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
     expensesForMonth,
     transactionsForMonth,
     totalSpent,
-    cashOnHand,
     deleteExpense,
   } = useBudgetStore();
 
   const { busy, exportCsv, progress } = useCsvExport();
   const [refreshing, setRefreshing] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const periodRelation = monthRelation(selectedMonthKey);
 
@@ -58,14 +80,15 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
     spent,
     monthlyBudget
   );
-  const cash = cashOnHand();
-  const { withdrawn: withdrawnThisMonth, cashSpent: cashSpentThisMonth } =
-    monthCashStats(monthTransactions);
 
   const byCategory = useMemo(() => sumByCategory(monthExpenses), [monthExpenses]);
-  const maxCategory = byCategory.length > 0 ? byCategory[0][1] : 0;
   const periodLabel =
     periodRelation === 'current' ? 'this month' : getMonthLabel(selectedMonthKey);
+
+  const visibleTransactions = useMemo(() => {
+    if (!searchQuery.trim()) return monthTransactions;
+    return monthTransactions.filter((item) => matchesSearch(item, searchQuery));
+  }, [monthTransactions, searchQuery]);
 
   const onRefresh = useCallback(async () => {
     if (busy) return;
@@ -77,26 +100,38 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
     }
   }, [busy]);
 
-  const confirmDelete = useCallback(
-    (id: string, label: string) => {
-      if (busy) return;
-      Alert.alert('Delete transaction', `Remove "${label}"?`, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteExpense(id) },
-      ]);
-    },
-    [busy, deleteExpense],
-  );
-
   const renderItem: ListRenderItem<Expense> = useCallback(
     ({ item }) => (
       <TransactionRow
         item={item}
-        onLongPress={busy ? undefined : () => confirmDelete(item.id, item.merchant ?? item.category)}
+        onPress={
+          busy ? undefined : () => navigation.navigate('AddExpense', { expenseId: item.id })
+        }
+        onLongPress={
+          busy
+            ? undefined
+            : () => confirmDeleteExpense(item.id, item.merchant ?? item.category, deleteExpense)
+        }
       />
     ),
-    [busy, confirmDelete],
+    [busy, deleteExpense, navigation],
   );
+
+  function toggleSearch() {
+    if (busy) return;
+    setSearchOpen((open) => {
+      if (open) setSearchQuery('');
+      return !open;
+    });
+  }
+
+  function openCategory(category: string) {
+    if (busy) return;
+    navigation.navigate('CategoryDetail', {
+      category,
+      monthKey: selectedMonthKey,
+    });
+  }
 
   const listHeader = (
     <>
@@ -122,9 +157,6 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         usage={usage}
         overBudget={overBudget}
         periodLabel={periodLabel}
-        cash={cash}
-        withdrawn={withdrawnThisMonth}
-        cashSpent={cashSpentThisMonth}
         onPressBudget={() => {
           if (!busy) navigation.navigate('BudgetSetup');
         }}
@@ -157,56 +189,101 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         />
       </View>
 
+      <SectionTitle>Top categories</SectionTitle>
       <AnimatedCard index={1} style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <SectionTitle style={styles.sectionTitleInline}>Top Categories</SectionTitle>
-          <Pressable
-            onPress={() => navigation.navigate('Stats')}
-            hitSlop={8}
-            disabled={busy}
-          >
-            <Text style={[styles.link, busy && styles.linkDisabled]}>See all</Text>
-          </Pressable>
-        </View>
-        {byCategory.length === 0 ? (
-          <Text style={styles.empty}>No spending in {getMonthLabel(selectedMonthKey)}.</Text>
-        ) : (
-          byCategory
-            .slice(0, 4)
-            .map(([name, amount]) => (
-              <CategoryBar key={name} name={name} amount={amount} max={maxCategory} />
-            ))
-        )}
+        <CategoryBreakdownList
+          items={byCategory}
+          total={spent}
+          limit={4}
+          emptyText={`No spending in ${getMonthLabel(selectedMonthKey)}.`}
+          onPressCategory={openCategory}
+        />
       </AnimatedCard>
 
-      <SectionTitle>Transactions in {getMonthLabel(selectedMonthKey)}</SectionTitle>
+      <View style={styles.transactionsHeader}>
+        <SectionTitle style={styles.sectionTitleInline}>
+          Transactions in {getMonthLabel(selectedMonthKey)}
+        </SectionTitle>
+        <Pressable
+          onPress={toggleSearch}
+          hitSlop={8}
+          disabled={busy}
+          style={({ pressed }) => [
+            styles.searchBtn,
+            searchOpen && styles.searchBtnActive,
+            pressed && !busy && styles.searchBtnPressed,
+            busy && styles.searchBtnDisabled,
+          ]}
+          accessibilityLabel={searchOpen ? 'Close search' : 'Search expenses'}
+        >
+          <Icon
+            name={searchOpen ? 'close' : 'search'}
+            size={18}
+            color={searchOpen ? colors.primary : colors.subText}
+          />
+        </Pressable>
+      </View>
+
+      {searchOpen ? (
+        <View style={styles.searchField}>
+          <Icon name="search" size={16} color={colors.muted} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search merchant, category, note…"
+            placeholderTextColor={colors.muted}
+            style={styles.searchInput}
+            autoFocus
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+            editable={!busy}
+            returnKeyType="search"
+            blurOnSubmit
+            onSubmitEditing={Keyboard.dismiss}
+          />
+        </View>
+      ) : null}
     </>
   );
 
+  const searching = Boolean(searchQuery.trim());
   const listEmpty = (
-    <View style={styles.emptyState}>
-      <IconTile name="receipt" color={colors.muted} size="lg" elevated={false} />
-      <Text style={styles.emptyTitle}>No transactions in this period</Text>
-      <Text style={styles.emptyText}>
-        {periodRelation === 'current'
-          ? 'Tap + below to add an expense, or use Import.'
-          : `Nothing recorded for ${getMonthLabel(selectedMonthKey)}.`}
-      </Text>
-    </View>
+    <EmptyState
+      icon={searching ? 'search' : 'receipt'}
+      title={searching ? 'No matching expenses' : 'No transactions in this period'}
+      message={
+        searching
+          ? 'Try another keyword, or clear the search.'
+          : periodRelation === 'current'
+            ? 'Tap + below to add an expense, or use Import.'
+            : `Nothing recorded for ${getMonthLabel(selectedMonthKey)}.`
+      }
+    />
   );
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+    >
       <FlatList
-        data={monthTransactions}
+        data={visibleTransactions}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={listEmpty}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          searchOpen && styles.listContentSearching,
+        ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!busy}
         pointerEvents={busy ? 'none' : 'auto'}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
+        onScrollBeginDrag={Keyboard.dismiss}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -220,22 +297,24 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         }
       />
 
-      <Pressable
-        onPress={() => {
-          if (!busy) navigation.navigate('AddExpense');
-        }}
-        disabled={busy}
-        style={({ pressed }) => [
-          styles.fab,
-          { bottom: insets.bottom + spacing.lg },
-          pressed && !busy && styles.fabPressed,
-          busy && styles.fabDisabled,
-        ]}
-        accessibilityLabel="Add expense"
-      >
-        <Icon name="add" size={22} color={colors.onAccent} />
-        <Text style={styles.fabLabel}>Add expense</Text>
-      </Pressable>
+      {!searchOpen ? (
+        <Pressable
+          onPress={() => {
+            if (!busy) navigation.navigate('AddExpense');
+          }}
+          disabled={busy}
+          style={({ pressed }) => [
+            styles.fab,
+            { bottom: insets.bottom + spacing.lg },
+            pressed && !busy && styles.fabPressed,
+            busy && styles.fabDisabled,
+          ]}
+          accessibilityLabel="Add expense"
+        >
+          <Icon name="add" size={22} color={colors.onAccent} />
+          <Text style={styles.fabLabel}>Add expense</Text>
+        </Pressable>
+      ) : null}
       <TransferStatusModal
         visible={progress != null}
         title={progress?.title ?? ''}
@@ -243,7 +322,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         step={progress?.step}
         totalSteps={progress?.totalSteps}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -255,6 +334,10 @@ const styles = StyleSheet.create({
   listContent: {
     padding: spacing.lg,
     paddingBottom: 100,
+    flexGrow: 1,
+  },
+  listContentSearching: {
+    paddingBottom: spacing.xxl,
   },
   headerBlock: {
     marginBottom: spacing.md,
@@ -273,40 +356,53 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.md,
   },
-  sectionHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
   sectionTitleInline: {
     marginBottom: 0,
+    flex: 1,
   },
-  link: {
-    color: colors.primary,
-    fontWeight: '700',
+  transactionsHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  linkDisabled: {
+  searchBtn: {
+    alignItems: 'center',
+    backgroundColor: colors.bgElevated,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  searchBtnActive: {
+    backgroundColor: colors.card,
+    borderColor: colors.primary,
+  },
+  searchBtnPressed: {
+    opacity: 0.75,
+  },
+  searchBtnDisabled: {
     opacity: 0.45,
   },
-  empty: {
-    color: colors.subText,
-  },
-  emptyState: {
+  searchField: {
     alignItems: 'center',
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: 'row',
     gap: spacing.sm,
-    paddingVertical: spacing.xl,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  emptyTitle: {
+  searchInput: {
     color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  emptyText: {
-    color: colors.subText,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.lg,
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 4,
   },
   fab: {
     alignItems: 'center',

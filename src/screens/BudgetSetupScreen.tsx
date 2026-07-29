@@ -7,7 +7,12 @@ import { TextInputField } from '../components/TextInputField';
 import { colors, radius, spacing } from '../constants/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
-import { formatCompact } from '../utils/format';
+import {
+  formatAmountInput,
+  formatCompact,
+  parseAmountInput,
+  stripAmountInput,
+} from '../utils/format';
 
 type BudgetSetupScreenProps = NativeStackScreenProps<RootStackParamList, 'BudgetSetup'>;
 
@@ -16,11 +21,18 @@ const PRESETS = [1_000_000, 2_000_000, 3_000_000, 5_000_000, 10_000_000];
 // Screen to set or update monthly budget quota.
 export function BudgetSetupScreen({ navigation }: BudgetSetupScreenProps) {
   const { monthlyBudget, setMonthlyBudget } = useBudgetStore();
-  const [budgetInput, setBudgetInput] = useState(monthlyBudget ? String(monthlyBudget) : '');
+  const [budgetInput, setBudgetInput] = useState(
+    monthlyBudget ? formatAmountInput(String(Math.round(monthlyBudget))) : ''
+  );
+
+  function handleAmountChange(text: string) {
+    const digits = stripAmountInput(text);
+    setBudgetInput(digits ? formatAmountInput(digits) : '');
+  }
 
   // Handles budget save action with basic validation.
   function handleSaveBudget() {
-    const parsed = Number(budgetInput);
+    const parsed = parseAmountInput(budgetInput);
 
     if (!parsed || parsed <= 0) {
       Alert.alert('Invalid budget', 'Please enter a valid amount greater than 0.');
@@ -41,8 +53,8 @@ export function BudgetSetupScreen({ navigation }: BudgetSetupScreenProps) {
         <TextInputField
           keyboardType="numeric"
           label="Budget amount (IDR)"
-          onChangeText={setBudgetInput}
-          placeholder="e.g. 3000000"
+          onChangeText={handleAmountChange}
+          placeholder="e.g. 3.000.000"
           value={budgetInput}
         />
 
@@ -50,7 +62,7 @@ export function BudgetSetupScreen({ navigation }: BudgetSetupScreenProps) {
           {PRESETS.map((preset) => (
             <Pressable
               key={preset}
-              onPress={() => setBudgetInput(String(preset))}
+              onPress={() => setBudgetInput(formatAmountInput(String(preset)))}
               style={styles.preset}
             >
               <Text style={styles.presetText}>{formatCompact(preset)}</Text>

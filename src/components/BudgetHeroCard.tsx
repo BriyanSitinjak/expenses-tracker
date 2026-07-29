@@ -3,7 +3,6 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-nativ
 import { colors, radius, spacing, surface } from '../constants/theme';
 import { formatCurrency } from '../utils/format';
 import { AnimatedNumber } from './AnimatedNumber';
-import { Icon, IconName } from './Icon';
 import { ProgressBar } from './ProgressBar';
 import { StatusPill } from './StatusPill';
 
@@ -14,53 +13,8 @@ type BudgetHeroCardProps = {
   usage: number;
   overBudget: boolean;
   periodLabel: string;
-  cash: number;
-  withdrawn: number;
-  cashSpent: number;
   onPressBudget: () => void;
 };
-
-type MetricProps = {
-  icon: IconName;
-  label: string;
-  value: string;
-  danger?: boolean;
-  delay: number;
-};
-
-function MetricChip({ icon, label, value, danger, delay }: MetricProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(10)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 380,
-        delay,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 380,
-        delay,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [delay, opacity, translateY]);
-
-  return (
-    <Animated.View style={[styles.metric, { opacity, transform: [{ translateY }] }]}>
-      <Icon name={icon} size={14} color={danger ? colors.danger : colors.muted} />
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={[styles.metricValue, danger && styles.metricDanger]} numberOfLines={1}>
-        {value}
-      </Text>
-    </Animated.View>
-  );
-}
 
 // Eye-catching budget summary with light staggered entrance motion.
 export function BudgetHeroCard({
@@ -70,9 +24,6 @@ export function BudgetHeroCard({
   usage,
   overBudget,
   periodLabel,
-  cash,
-  withdrawn,
-  cashSpent,
   onPressBudget,
 }: BudgetHeroCardProps) {
   const enter = useRef(new Animated.Value(0)).current;
@@ -169,32 +120,6 @@ export function BudgetHeroCard({
           </Text>
         </Pressable>
       </View>
-
-      <View style={styles.metricsRow}>
-        <MetricChip
-          icon="wallet"
-          label="Cash"
-          value={formatCurrency(cash)}
-          danger={cash < 0}
-          delay={120}
-        />
-        <MetricChip
-          icon="arrow-down"
-          label="Withdrawn"
-          value={formatCurrency(withdrawn)}
-          delay={180}
-        />
-        <MetricChip
-          icon="cart"
-          label="Cash spent"
-          value={formatCurrency(cashSpent)}
-          delay={240}
-        />
-      </View>
-
-      {cash < 0 ? (
-        <Text style={styles.warn}>Cash spending is higher than recorded withdrawals.</Text>
-      ) : null}
     </Animated.View>
   );
 }
@@ -270,39 +195,5 @@ const styles = StyleSheet.create({
   },
   budgetLink: {
     color: colors.primary,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  metric: {
-    backgroundColor: colors.bgElevated,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    flex: 1,
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  metricLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  metricValue: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  metricDanger: {
-    color: colors.danger,
-  },
-  warn: {
-    color: colors.warning,
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: spacing.sm,
   },
 });

@@ -5,9 +5,10 @@ import {
   DEFAULT_CATEGORIES,
   DEFAULT_SUBCATEGORIES,
   FALLBACK_CATEGORY,
+  WITHDRAWAL_CATEGORY,
 } from '../constants/categories';
 import { BudgetState, DraftExpense, Expense } from '../types';
-import { computeCashOnHand, sumAmount } from '../utils/analytics';
+import { computeCashOnHand, onlyExpenses, sumAmount } from '../utils/analytics';
 import { getMonthKey, shiftMonthKey } from '../utils/date';
 
 type ImportResult = {
@@ -26,6 +27,10 @@ type BudgetActions = {
     }
   ) => void;
   importExpenses: (drafts: DraftExpense[]) => ImportResult;
+  updateExpense: (
+    id: string,
+    patch: Partial<Omit<Expense, 'id'>>
+  ) => boolean;
   deleteExpense: (id: string) => void;
   addCategory: (name: string) => string | null;
   addSubcategory: (parent: string, name: string) => string | null;
@@ -44,11 +49,6 @@ type BudgetSelectors = {
 };
 
 type BudgetStore = BudgetState & BudgetActions & BudgetSelectors;
-
-// Sums amounts of a list of transactions.
-function sumSpent(expenses: Expense[]): number {
-  return sumAmount(expenses);
-}
 
 // Creates a stable unique id without external dependency.
 function createExpenseId(): string {
@@ -259,6 +259,42 @@ export const useBudgetStore = create<BudgetStore>()(
         return { added: accepted.length };
       },
 
+      // Updates one transaction; returns false if id is missing or patch is invalid.
+      updateExpense: (id, patch) => {
+        const existing = get().expenses.find((item) => item.id === id);
+        if (!existing) return false;
+
+        const next: Expense = {
+          ...existing,
+          ...patch,
+          id: existing.id,
+        };
+
+        if (!Number.isFinite(next.amount) || next.amount <= 0) return false;
+        if (!next.date || Number.isNaN(new Date(next.date).getTime())) return false;
+
+        if (next.type === 'withdrawal') {
+          next.category = WITHDRAWAL_CATEGORY;
+          next.subcategory = undefined;
+          next.method = 'cash';
+        } else if (!next.category.trim()) {
+          return false;
+        }
+
+        set((state) => ({
+          expenses: state.expenses.map((item) => (item.id === id ? next : item)),
+          categories:
+            next.type === 'expense'
+              ? withCategory(state.categories, next.category)
+              : state.categories,
+          subcategories:
+            next.type === 'expense' && next.subcategory
+              ? withSubcategory(state.subcategories, next.category, next.subcategory)
+              : state.subcategories,
+        }));
+        return true;
+      },
+
       // Removes one transaction by id.
       deleteExpense: (id) => {
         set((state) => ({ expenses: state.expenses.filter((item) => item.id !== id) }));
@@ -282,13 +318,11 @@ export const useBudgetStore = create<BudgetStore>()(
 
       // Returns only real spending for a month (excludes cash withdrawals).
       expensesForMonth: (monthKey) => {
-        return get()
-          .transactionsForMonth(monthKey)
-          .filter((item) => item.type === 'expense');
+        return onlyExpenses(get().transactionsForMonth(monthKey));
       },
 
       // Total spent for a month (defaults to active month, excludes withdrawals).
-      totalSpent: (monthKey) => sumSpent(get().expensesForMonth(monthKey)),
+      totalSpent: (monthKey) => sumAmount(get().expensesForMonth(monthKey)),
 
       // Cash on hand = all cash withdrawn minus all cash spent (all-time).
       cashOnHand: () => computeCashOnHand(get().expenses),

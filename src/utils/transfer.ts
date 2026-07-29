@@ -22,7 +22,7 @@ export type TransferStatus = {
   totalSteps?: number;
 } | null;
 
-export type ShareFileOptions = {
+type ShareFileOptions = {
   mimeType: string;
   dialogTitle: string;
   UTI?: string;
