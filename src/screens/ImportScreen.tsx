@@ -18,6 +18,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { DraftExpense } from '../types';
 import { onlyExpenses, sumAmount } from '../utils/analytics';
+import { exportImportTemplate } from '../utils/backup';
 import { formatCurrency } from '../utils/format';
 import {
   isExcelFileName,
@@ -28,6 +29,7 @@ import {
 } from '../utils/import';
 import {
   describeTransferError,
+  preloadTransferModules,
   readBase64File,
   readTextFile,
   TransferStatus,
@@ -149,6 +151,53 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
     ingest(parseImportFile(sampleBankStatementCsv()), 'demo-statement.csv');
   }
 
+  async function handleDownloadTemplate() {
+    if (loading || progress != null) return;
+    try {
+      setLoading(true);
+      preloadTransferModules();
+      setProgress({
+        title: 'CSV template',
+        message: 'Preparing template…',
+        step: 1,
+        totalSteps: 2,
+      });
+      await yieldToUI();
+
+      const result = await exportImportTemplate({
+        onProgress: (update) => {
+          setProgress({
+            title: 'CSV template',
+            message: update.message,
+            step: update.step,
+            totalSteps: update.totalSteps,
+          });
+        },
+        onBeforeShare: async () => {
+          setProgress(null);
+          await yieldToUI(40);
+        },
+      });
+
+      setProgress(null);
+      if (!result.shared && !result.dismissed) {
+        Alert.alert(
+          'Template saved',
+          `Sharing is unavailable on this device, so the file was saved locally:\n${result.fileUri}`
+        );
+      }
+    } catch (error) {
+      setProgress(null);
+      Alert.alert(
+        'Template failed',
+        describeTransferError(error, 'Could not create or share the CSV template. Please try again.')
+      );
+    } finally {
+      setLoading(false);
+      setProgress(null);
+    }
+  }
+
   async function handleConfirmImport() {
     if (!report || report.drafts.length === 0) return;
     try {
@@ -197,9 +246,9 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
       <Card style={styles.infoCard}>
         <Text style={styles.infoTitle}>Import transactions</Text>
         <Text style={styles.infoText}>
-          Import an Excel (.xlsx) or CSV backup from this app, or a bank statement CSV. App CSV
-          backups keep categories, payment method, and notes. Bank files need Date, Description and
-          Amount (or Debit) columns.
+          Import an Excel (.xlsx) or CSV backup from this app, or a bank statement CSV. Download the
+          CSV template to fill rows offline — keep the header columns, then pick the file here. Bank
+          files need Date, Description and Amount (or Debit) columns.
         </Text>
         <View style={styles.buttonRow}>
           <Button
@@ -218,6 +267,14 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
             disabled={loading || progress != null}
           />
         </View>
+        <Button
+          icon="download"
+          variant="secondary"
+          label="Download CSV template"
+          onPress={handleDownloadTemplate}
+          style={styles.templateBtn}
+          disabled={loading || progress != null}
+        />
       </Card>
 
       {report ? (
@@ -313,6 +370,9 @@ const styles = StyleSheet.create({
   },
   flexBtn: {
     flex: 1,
+  },
+  templateBtn: {
+    marginTop: spacing.sm,
   },
   summary: {
     marginBottom: spacing.md,

@@ -42,6 +42,20 @@ function escapeCsvField(value: string): string {
   return value;
 }
 
+function backupRowToCsvLine(item: BackupRow): string {
+  return [
+    item.date,
+    item.amount,
+    escapeCsvField(item.category),
+    escapeCsvField(item.subcategory),
+    escapeCsvField(item.merchant),
+    item.type,
+    item.method,
+    item.source,
+    escapeCsvField(item.note),
+  ].join(',');
+}
+
 function expenseToBackupRow(item: Expense): BackupRow {
   return {
     date: item.date,
@@ -71,21 +85,59 @@ export function isBackupHeaders(headers: string[]): boolean {
 // Builds a CSV backup that preserves all transaction fields for re-import.
 function buildBackupCsv(expenses: Expense[]): string {
   const header = BACKUP_CSV_HEADERS.join(',');
-  const rows = expensesToBackupRows(expenses).map((item) =>
-    [
-      item.date,
-      item.amount,
-      escapeCsvField(item.category),
-      escapeCsvField(item.subcategory),
-      escapeCsvField(item.merchant),
-      item.type,
-      item.method,
-      item.source,
-      escapeCsvField(item.note),
-    ].join(',')
-  );
-
+  const rows = expensesToBackupRows(expenses).map(backupRowToCsvLine);
   return [header, ...rows].join('\n');
+}
+
+// Local calendar day as YYYY-MM-DD for easy editing in Sheets/Excel.
+function dayKey(offset = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() - offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+}
+
+// Blank-ready CSV template with example rows matching the app import format.
+export function buildImportTemplateCsv(): string {
+  const header = BACKUP_CSV_HEADERS.join(',');
+  const examples: BackupRow[] = [
+    {
+      date: dayKey(0),
+      amount: 45000,
+      category: 'Food',
+      subcategory: 'Coffee',
+      merchant: 'Kopi Kenangan',
+      type: 'expense',
+      method: 'debit',
+      source: 'manual',
+      note: 'Morning coffee — replace or delete these example rows',
+    },
+    {
+      date: dayKey(1),
+      amount: 154000,
+      category: 'Groceries',
+      subcategory: '',
+      merchant: 'Indomaret',
+      type: 'expense',
+      method: 'cash',
+      source: 'manual',
+      note: '',
+    },
+    {
+      date: dayKey(2),
+      amount: 500000,
+      category: 'Cash Withdrawal',
+      subcategory: '',
+      merchant: 'ATM BCA',
+      type: 'withdrawal',
+      method: 'cash',
+      source: 'manual',
+      note: 'Transfers use type=withdrawal (excluded from spending)',
+    },
+  ];
+
+  return [header, ...examples.map(backupRowToCsvLine)].join('\n');
 }
 
 type BackupExportOptions = {
@@ -95,21 +147,20 @@ type BackupExportOptions = {
 
 const CSV_STEPS = 2;
 
-// Exports transactions as a shareable CSV backup file.
-export async function exportTransactionsBackup(
-  expenses: Expense[],
-  options: BackupExportOptions = {}
+async function shareCsvFile(
+  csv: string,
+  fileName: string,
+  dialogTitle: string,
+  options: BackupExportOptions & { prepareMessage?: string } = {}
 ): Promise<ExportResult> {
-  const { onProgress, onBeforeShare } = options;
+  const { onProgress, onBeforeShare, prepareMessage } = options;
   preloadTransferModules();
 
   await reportTransferProgress(onProgress, {
     step: 1,
     totalSteps: CSV_STEPS,
-    message: `Building CSV for ${expenses.length} transaction${expenses.length === 1 ? '' : 's'}…`,
+    message: prepareMessage ?? 'Preparing CSV…',
   });
-  const csv = buildBackupCsv(expenses);
-  const fileName = `expenses-backup-${new Date().toISOString().slice(0, 10)}.csv`;
 
   if (Platform.OS === 'web') {
     await reportTransferProgress(onProgress, {
@@ -141,13 +192,39 @@ export async function exportTransactionsBackup(
 
   const shareStatus = await shareExportFile(fileUri, {
     mimeType: 'text/csv',
-    dialogTitle: 'Export backup',
+    dialogTitle,
     UTI: 'public.comma-separated-values-text',
   });
 
   if (shareStatus === 'unavailable') return { fileUri, shared: false };
   if (shareStatus === 'dismissed') return { fileUri, shared: false, dismissed: true };
   return { fileUri, shared: true };
+}
+
+// Exports transactions as a shareable CSV backup file.
+export async function exportTransactionsBackup(
+  expenses: Expense[],
+  options: BackupExportOptions = {}
+): Promise<ExportResult> {
+  const csv = buildBackupCsv(expenses);
+  const fileName = `expenses-backup-${new Date().toISOString().slice(0, 10)}.csv`;
+  return shareCsvFile(csv, fileName, 'Export backup', {
+    ...options,
+    prepareMessage: `Building CSV for ${expenses.length} transaction${
+      expenses.length === 1 ? '' : 's'
+    }…`,
+  });
+}
+
+// Shares a fillable CSV template for manual imports.
+export async function exportImportTemplate(
+  options: BackupExportOptions = {}
+): Promise<ExportResult> {
+  const csv = buildImportTemplateCsv();
+  return shareCsvFile(csv, 'expenses-import-template.csv', 'CSV import template', {
+    ...options,
+    prepareMessage: 'Building import template…',
+  });
 }
 
 // Returns true when CSV headers match the app's backup export format.
