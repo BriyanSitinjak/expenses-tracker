@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { colors } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -11,6 +11,7 @@ type IconProps = {
 };
 
 // Thin wrapper so icons stay simple, solid, and consistently colored.
-export function Icon({ name, size = 20, color = colors.text }: IconProps) {
-  return <Ionicons name={name} size={size} color={color} />;
+export function Icon({ name, size = 20, color }: IconProps) {
+  const { colors } = useAppTheme();
+  return <Ionicons name={name} size={size} color={color ?? colors.text} />;
 }

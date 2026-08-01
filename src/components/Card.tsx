@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
-import { spacing, surface } from '../constants/theme';
+import { ThemeColors, spacing, surface } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 type CardProps = React.PropsWithChildren<{
   style?: ViewStyle;
@@ -8,12 +9,17 @@ type CardProps = React.PropsWithChildren<{
 
 // Reusable container card for grouped content sections.
 export function Card({ children, style }: CardProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-  card: {
-    padding: spacing.lg,
-    ...surface('md', { radius: 'xl' }),
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    card: {
+      padding: spacing.lg,
+      ...surface('md', { radius: 'xl' }, colors),
+    },
+  });
+}

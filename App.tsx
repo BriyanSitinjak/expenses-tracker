@@ -1,29 +1,33 @@
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { colors } from './src/constants/theme';
+import { useAppTheme } from './src/hooks/useAppTheme';
 import { AppNavigator } from './src/navigation/AppNavigator';
-
-// App-wide navigation theme built on the Scandinavian light palette.
-const navTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.bg,
-    card: colors.bgElevated,
-    text: colors.text,
-    border: colors.border,
-    primary: colors.primary,
-    notification: colors.accent,
-  },
-};
 
 // App root component that wires navigation and theming.
 export default function App() {
+  const { colors, isDark } = useAppTheme();
+
+  const navTheme = useMemo(
+    () => ({
+      ...(isDark ? DarkTheme : DefaultTheme),
+      colors: {
+        ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
+        background: colors.bg,
+        card: colors.bgElevated,
+        text: colors.text,
+        border: colors.border,
+        primary: colors.primary,
+        notification: colors.accent,
+      },
+    }),
+    [colors, isDark]
+  );
+
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <NavigationContainer theme={navTheme}>
         <AppNavigator />
       </NavigationContainer>

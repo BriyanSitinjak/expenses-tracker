@@ -7,7 +7,8 @@ import { CategoryShareChart } from '../components/CategoryShareChart';
 import { IconTile } from '../components/IconTile';
 import { ProgressBar } from '../components/ProgressBar';
 import { SectionTitle } from '../components/SectionTitle';
-import { colors, spacing } from '../constants/theme';
+import { ThemeColors, spacing } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { onlyExpenses, sumAmount, sumByCategory, sumByMethod } from '../utils/analytics';
@@ -17,6 +18,8 @@ type StatsScreenProps = NativeStackScreenProps<RootStackParamList, 'Stats'>;
 
 // All-time stats: share overview, category bars, cash split, and payment mix.
 export function StatsScreen({ navigation }: StatsScreenProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { expenses, cashOnHand } = useBudgetStore();
 
   const onlyExpenseRows = useMemo(() => onlyExpenses(expenses), [expenses]);
@@ -88,64 +91,66 @@ export function StatsScreen({ navigation }: StatsScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.bg,
-    flex: 1,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  block: {
-    marginBottom: spacing.lg,
-  },
-  txnHint: {
-    color: colors.subText,
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: spacing.md,
-  },
-  cashRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  cashLabel: {
-    color: colors.subText,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  cashValue: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '900',
-    marginTop: 2,
-  },
-  cashDanger: {
-    color: colors.danger,
-  },
-  methodMeta: {
-    gap: 4,
-    marginBottom: spacing.sm,
-  },
-  metaLine: {
-    color: colors.subText,
-    fontSize: 13,
-  },
-  metaStrong: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  progressHint: {
-    color: colors.muted,
-    fontSize: 12,
-    marginTop: spacing.sm,
-  },
-  footnote: {
-    color: colors.muted,
-    fontSize: 12,
-    textAlign: 'center',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.bg,
+      flex: 1,
+    },
+    content: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xxl,
+    },
+    block: {
+      marginBottom: spacing.lg,
+    },
+    txnHint: {
+      color: colors.subText,
+      fontSize: 13,
+      fontWeight: '600',
+      marginBottom: spacing.md,
+    },
+    cashRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: spacing.md,
+    },
+    cashLabel: {
+      color: colors.subText,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    cashValue: {
+      color: colors.text,
+      fontSize: 28,
+      fontWeight: '900',
+      marginTop: 2,
+    },
+    cashDanger: {
+      color: colors.danger,
+    },
+    methodMeta: {
+      gap: 4,
+      marginBottom: spacing.sm,
+    },
+    metaLine: {
+      color: colors.subText,
+      fontSize: 13,
+    },
+    metaStrong: {
+      color: colors.text,
+      fontWeight: '700',
+    },
+    progressHint: {
+      color: colors.muted,
+      fontSize: 12,
+      marginTop: spacing.sm,
+    },
+    footnote: {
+      color: colors.muted,
+      fontSize: 12,
+      textAlign: 'center',
+    },
+  });
+}

@@ -19,8 +19,27 @@ export const radius = {
   pill: 999,
 };
 
+export type ThemeColors = {
+  bg: string;
+  bgElevated: string;
+  card: string;
+  cardAlt: string;
+  text: string;
+  subText: string;
+  muted: string;
+  primary: string;
+  accent: string;
+  success: string;
+  warning: string;
+  danger: string;
+  border: string;
+  track: string;
+  onAccent: string;
+  overlay: string;
+};
+
 // Warm cream Scandinavian palette inspired by terracotta-on-parchment branding.
-export const colors = {
+export const lightColors: ThemeColors = {
   bg: '#F9F6F2',
   bgElevated: '#F3EEE6',
   card: '#FFFFFF',
@@ -38,6 +57,29 @@ export const colors = {
   onAccent: '#FFFFFF',
   overlay: 'rgba(44, 41, 38, 0.45)',
 };
+
+// Night counterpart that keeps the terracotta accent on deep warm neutrals.
+export const darkColors: ThemeColors = {
+  bg: '#171513',
+  bgElevated: '#211E1B',
+  card: '#2A2622',
+  cardAlt: '#342F2A',
+  text: '#F3EEE6',
+  subText: '#B8B2A8',
+  muted: '#8A847C',
+  primary: '#E08B74',
+  accent: '#D6765D',
+  success: '#8FAF8A',
+  warning: '#D4A85A',
+  danger: '#D07060',
+  border: '#3F3A35',
+  track: '#3A3530',
+  onAccent: '#FFFFFF',
+  overlay: 'rgba(0, 0, 0, 0.55)',
+};
+
+/** @deprecated Prefer useAppTheme().colors — kept as light default for non-UI helpers. */
+export const colors = lightColors;
 
 // Appends an alpha channel to a #RRGGBB color (alpha is 0..1).
 export function withAlpha(hex: string, alpha: number): string {
@@ -135,19 +177,24 @@ export function colorForSubcategory(subcategory: string, parentCategory?: string
   return pickFromPalette(key, SUBCATEGORY_PALETTE);
 }
 
-// Cross-platform elevation/shadow helper (softened for light Scandinavian UI).
-export function shadow(level: 'sm' | 'md' = 'md'): ViewStyle {
+// Cross-platform elevation/shadow helper (softened for Scandinavian UI).
+export function shadow(
+  level: 'sm' | 'md' = 'md',
+  palette: ThemeColors = lightColors
+): ViewStyle {
   const map = {
     sm: { radius: 6, opacity: 0.06, height: 2, elevation: 1 },
     md: { radius: 12, opacity: 0.1, height: 4, elevation: 3 },
   } as const;
   const config = map[level];
+  const isDark = palette.bg === darkColors.bg;
+  const shadowOpacity = isDark ? config.opacity * 2.2 : config.opacity;
 
   return Platform.select<ViewStyle>({
     ios: {
-      shadowColor: colors.text,
+      shadowColor: isDark ? '#000000' : palette.text,
       shadowOffset: { width: 0, height: config.height },
-      shadowOpacity: config.opacity,
+      shadowOpacity,
       shadowRadius: config.radius,
     },
     android: { elevation: config.elevation },
@@ -158,13 +205,14 @@ export function shadow(level: 'sm' | 'md' = 'md'): ViewStyle {
 // Shared card/surface chrome used by cards and action tiles.
 export function surface(
   level: 'sm' | 'md' = 'md',
-  options?: { radius?: keyof typeof radius }
+  options?: { radius?: keyof typeof radius },
+  palette: ThemeColors = lightColors
 ): ViewStyle {
   return {
-    backgroundColor: colors.card,
-    borderColor: colors.border,
+    backgroundColor: palette.card,
+    borderColor: palette.border,
     borderRadius: radius[options?.radius ?? 'lg'],
     borderWidth: 1,
-    ...shadow(level),
+    ...shadow(level, palette),
   };
 }

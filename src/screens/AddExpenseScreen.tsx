@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -21,11 +21,12 @@ import { WITHDRAWAL_CATEGORY } from '../constants/categories';
 import {
   colorForCategory,
   colorForSubcategory,
-  colors,
+  ThemeColors,
   radius,
   spacing,
   withAlpha,
 } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { PaymentMethod } from '../types';
@@ -43,6 +44,8 @@ const METHODS: { key: PaymentMethod; label: string; icon: IconName }[] = [
 
 // Screen to create or edit an expense / cash withdrawal.
 export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const expenseId = route.params?.expenseId;
   const {
     addExpense,
@@ -375,90 +378,92 @@ export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.bg,
-    flex: 1,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl * 2,
-  },
-  segment: {
-    flexDirection: 'row',
-    backgroundColor: colors.bgElevated,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 4,
-    marginBottom: spacing.md,
-  },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    borderRadius: radius.md,
-  },
-  segmentContent: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  segmentActive: {
-    backgroundColor: colors.primary,
-  },
-  segmentText: {
-    color: colors.subText,
-    fontWeight: '700',
-  },
-  segmentTextActive: {
-    color: colors.onAccent,
-  },
-  hint: {
-    color: colors.subText,
-    fontSize: 13,
-    marginBottom: spacing.md,
-    lineHeight: 18,
-  },
-  label: {
-    color: colors.subText,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-  },
-  methodRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  methodBtn: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgElevated,
-  },
-  methodActive: {
-    borderColor: colors.primary,
-    backgroundColor: withAlpha(colors.primary, 0.13),
-  },
-  methodContent: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  methodText: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  methodTextActive: {
-    color: colors.primary,
-  },
-  chipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.bg,
+      flex: 1,
+    },
+    content: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xxl * 2,
+    },
+    segment: {
+      flexDirection: 'row',
+      backgroundColor: colors.bgElevated,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 4,
+      marginBottom: spacing.md,
+    },
+    segmentBtn: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      alignItems: 'center',
+      borderRadius: radius.md,
+    },
+    segmentContent: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.xs,
+    },
+    segmentActive: {
+      backgroundColor: colors.primary,
+    },
+    segmentText: {
+      color: colors.subText,
+      fontWeight: '700',
+    },
+    segmentTextActive: {
+      color: colors.onAccent,
+    },
+    hint: {
+      color: colors.subText,
+      fontSize: 13,
+      marginBottom: spacing.md,
+      lineHeight: 18,
+    },
+    label: {
+      color: colors.subText,
+      fontWeight: '600',
+      marginBottom: spacing.sm,
+    },
+    methodRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    methodBtn: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.bgElevated,
+    },
+    methodActive: {
+      borderColor: colors.primary,
+      backgroundColor: withAlpha(colors.primary, 0.13),
+    },
+    methodContent: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.xs,
+    },
+    methodText: {
+      color: colors.text,
+      fontWeight: '700',
+    },
+    methodTextActive: {
+      color: colors.primary,
+    },
+    chipWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+  });
+}

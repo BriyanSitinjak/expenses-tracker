@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
-import { colors, radius, spacing } from '../constants/theme';
+import { ThemeColors, radius, spacing } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { Button } from './Button';
 
 type InlineAddRowProps = {
@@ -19,6 +20,9 @@ export function InlineAddRow({
   onSubmit,
   placeholder,
 }: InlineAddRowProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   if (!visible) return null;
 
   return (
@@ -37,24 +41,26 @@ export function InlineAddRow({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: colors.bgElevated,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    color: colors.text,
-    fontSize: 16,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  button: {
-    justifyContent: 'center',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: colors.bgElevated,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      color: colors.text,
+      fontSize: 16,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+    },
+    button: {
+      justifyContent: 'center',
+    },
+  });
+}

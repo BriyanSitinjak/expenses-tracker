@@ -25,7 +25,8 @@ import { MonthSwitcher } from '../components/MonthSwitcher';
 import { SectionTitle } from '../components/SectionTitle';
 import { TransactionRow } from '../components/TransactionRow';
 import { TransferStatusModal } from '../components/TransferStatusModal';
-import { colors, radius, spacing } from '../constants/theme';
+import { ThemeColors, radius, spacing } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { useCsvExport } from '../hooks/useCsvExport';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
@@ -55,6 +56,8 @@ function matchesSearch(item: Expense, query: string): boolean {
 
 export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const {
     monthlyBudget,
     selectedMonthKey,
@@ -326,111 +329,113 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.bg,
-    flex: 1,
-  },
-  listContent: {
-    padding: spacing.lg,
-    paddingBottom: 100,
-    flexGrow: 1,
-  },
-  listContentSearching: {
-    paddingBottom: spacing.xxl,
-  },
-  headerBlock: {
-    marginBottom: spacing.md,
-  },
-  headerTitle: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: -0.4,
-  },
-  toolRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  section: {
-    marginBottom: spacing.md,
-  },
-  sectionTitleInline: {
-    marginBottom: 0,
-    flex: 1,
-  },
-  transactionsHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  searchBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.bgElevated,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  searchBtnActive: {
-    backgroundColor: colors.card,
-    borderColor: colors.primary,
-  },
-  searchBtnPressed: {
-    opacity: 0.75,
-  },
-  searchBtnDisabled: {
-    opacity: 0.45,
-  },
-  searchField: {
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  searchInput: {
-    color: colors.text,
-    flex: 1,
-    fontSize: 15,
-    paddingVertical: 4,
-  },
-  fab: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-    bottom: spacing.lg,
-    elevation: 8,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    position: 'absolute',
-    right: spacing.lg,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
-    shadowRadius: 8,
-  },
-  fabPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.97 }],
-  },
-  fabDisabled: {
-    opacity: 0.45,
-  },
-  fabLabel: {
-    color: colors.onAccent,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.bg,
+      flex: 1,
+    },
+    listContent: {
+      padding: spacing.lg,
+      paddingBottom: 100,
+      flexGrow: 1,
+    },
+    listContentSearching: {
+      paddingBottom: spacing.xxl,
+    },
+    headerBlock: {
+      marginBottom: spacing.md,
+    },
+    headerTitle: {
+      color: colors.text,
+      fontSize: 28,
+      fontWeight: '900',
+      letterSpacing: -0.4,
+    },
+    toolRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    section: {
+      marginBottom: spacing.md,
+    },
+    sectionTitleInline: {
+      marginBottom: 0,
+      flex: 1,
+    },
+    transactionsHeader: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    searchBtn: {
+      alignItems: 'center',
+      backgroundColor: colors.bgElevated,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      height: 36,
+      justifyContent: 'center',
+      width: 36,
+    },
+    searchBtnActive: {
+      backgroundColor: colors.card,
+      borderColor: colors.primary,
+    },
+    searchBtnPressed: {
+      opacity: 0.75,
+    },
+    searchBtnDisabled: {
+      opacity: 0.45,
+    },
+    searchField: {
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    searchInput: {
+      color: colors.text,
+      flex: 1,
+      fontSize: 15,
+      paddingVertical: 4,
+    },
+    fab: {
+      alignItems: 'center',
+      backgroundColor: colors.primary,
+      borderRadius: radius.pill,
+      bottom: spacing.lg,
+      elevation: 8,
+      flexDirection: 'row',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      position: 'absolute',
+      right: spacing.lg,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.28,
+      shadowRadius: 8,
+    },
+    fabPressed: {
+      opacity: 0.9,
+      transform: [{ scale: 0.97 }],
+    },
+    fabDisabled: {
+      opacity: 0.45,
+    },
+    fabLabel: {
+      color: colors.onAccent,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+  });
+}

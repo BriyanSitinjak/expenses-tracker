@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, surface } from '../constants/theme';
+import { ThemeColors, radius, spacing, surface } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { formatCurrency } from '../utils/format';
 import { AnimatedNumber } from './AnimatedNumber';
 import { ProgressBar } from './ProgressBar';
@@ -26,6 +27,8 @@ export function BudgetHeroCard({
   periodLabel,
   onPressBudget,
 }: BudgetHeroCardProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const enter = useRef(new Animated.Value(0)).current;
   const amountPulse = useRef(new Animated.Value(1)).current;
 
@@ -40,7 +43,7 @@ export function BudgetHeroCard({
       return { label: 'Almost there', color: colors.warning, bar: colors.warning };
     }
     return { label: 'On track', color: colors.success, bar: colors.primary };
-  }, [budget, overBudget, usage]);
+  }, [budget, colors, overBudget, usage]);
 
   const usagePercent = Math.round(Math.max(0, Math.min(usage, 2)) * 100);
 
@@ -124,76 +127,78 @@ export function BudgetHeroCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-    padding: spacing.lg,
-    ...surface('md', { radius: 'xl' }),
-  },
-  topRow: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: spacing.md,
-    justifyContent: 'space-between',
-  },
-  kicker: {
-    color: colors.subText,
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  amount: {
-    fontSize: 36,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-    marginTop: spacing.xs,
-    maxWidth: 220,
-  },
-  progressBlock: {
-    marginTop: spacing.lg,
-  },
-  progressLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  progressCaption: {
-    color: colors.subText,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  metaRow: {
-    alignItems: 'center',
-    backgroundColor: colors.bgElevated,
-    borderRadius: radius.lg,
-    flexDirection: 'row',
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  metaItem: {
-    flex: 1,
-  },
-  metaDivider: {
-    backgroundColor: colors.border,
-    height: 28,
-    marginHorizontal: spacing.sm,
-    width: 1,
-  },
-  metaLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  metaValue: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  budgetLink: {
-    color: colors.primary,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    card: {
+      marginBottom: spacing.md,
+      overflow: 'hidden',
+      padding: spacing.lg,
+      ...surface('md', { radius: 'xl' }, colors),
+    },
+    topRow: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      gap: spacing.md,
+      justifyContent: 'space-between',
+    },
+    kicker: {
+      color: colors.subText,
+      fontSize: 13,
+      fontWeight: '600',
+      letterSpacing: 0.2,
+    },
+    amount: {
+      fontSize: 36,
+      fontWeight: '900',
+      letterSpacing: -0.5,
+      marginTop: spacing.xs,
+      maxWidth: 220,
+    },
+    progressBlock: {
+      marginTop: spacing.lg,
+    },
+    progressLabels: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: spacing.xs,
+    },
+    progressCaption: {
+      color: colors.subText,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    metaRow: {
+      alignItems: 'center',
+      backgroundColor: colors.bgElevated,
+      borderRadius: radius.lg,
+      flexDirection: 'row',
+      marginTop: spacing.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    metaItem: {
+      flex: 1,
+    },
+    metaDivider: {
+      backgroundColor: colors.border,
+      height: 28,
+      marginHorizontal: spacing.sm,
+      width: 1,
+    },
+    metaLabel: {
+      color: colors.muted,
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    metaValue: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '800',
+      marginTop: 2,
+    },
+    budgetLink: {
+      color: colors.primary,
+    },
+  });
+}

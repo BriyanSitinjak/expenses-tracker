@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,7 +13,8 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { TransactionRow } from '../components/TransactionRow';
 import { TransferStatusModal } from '../components/TransferStatusModal';
-import { colors, spacing } from '../constants/theme';
+import { ThemeColors, spacing } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { DraftExpense } from '../types';
@@ -62,6 +63,8 @@ async function readExcelPayload(
 
 // Bank statement / backup import: pick CSV or Excel, review, then import.
 export function ImportScreen({ navigation }: ImportScreenProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { importExpenses } = useBudgetStore();
   const [report, setReport] = useState<ParseReport | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -341,68 +344,70 @@ export function ImportScreen({ navigation }: ImportScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.bg,
-    flex: 1,
-  },
-  listContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  infoCard: {
-    marginBottom: spacing.lg,
-  },
-  infoTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: spacing.xs,
-  },
-  infoText: {
-    color: colors.subText,
-    lineHeight: 20,
-    marginBottom: spacing.lg,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  flexBtn: {
-    flex: 1,
-  },
-  templateBtn: {
-    marginTop: spacing.sm,
-  },
-  summary: {
-    marginBottom: spacing.md,
-  },
-  summaryFile: {
-    color: colors.text,
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  summaryStats: {
-    color: colors.subText,
-    marginTop: 2,
-  },
-  summaryTotal: {
-    color: colors.accent,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  summaryNote: {
-    color: colors.subText,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  loader: {
-    paddingTop: spacing.xl,
-  },
-  footer: {
-    padding: spacing.lg,
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    backgroundColor: colors.bgElevated,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.bg,
+      flex: 1,
+    },
+    listContent: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xxl,
+    },
+    infoCard: {
+      marginBottom: spacing.lg,
+    },
+    infoTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '800',
+      marginBottom: spacing.xs,
+    },
+    infoText: {
+      color: colors.subText,
+      lineHeight: 20,
+      marginBottom: spacing.lg,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    flexBtn: {
+      flex: 1,
+    },
+    templateBtn: {
+      marginTop: spacing.sm,
+    },
+    summary: {
+      marginBottom: spacing.md,
+    },
+    summaryFile: {
+      color: colors.text,
+      fontWeight: '800',
+      fontSize: 16,
+    },
+    summaryStats: {
+      color: colors.subText,
+      marginTop: 2,
+    },
+    summaryTotal: {
+      color: colors.accent,
+      fontWeight: '800',
+      marginTop: 4,
+    },
+    summaryNote: {
+      color: colors.subText,
+      fontSize: 12,
+      marginTop: 4,
+    },
+    loader: {
+      paddingTop: spacing.xl,
+    },
+    footer: {
+      padding: spacing.lg,
+      borderTopColor: colors.border,
+      borderTopWidth: 1,
+      backgroundColor: colors.bgElevated,
+    },
+  });
+}

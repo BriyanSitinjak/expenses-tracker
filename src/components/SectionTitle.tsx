@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TextStyle } from 'react-native';
-import { colors } from '../constants/theme';
+import { ThemeColors } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 type SectionTitleProps = {
   children: React.ReactNode;
@@ -9,14 +10,19 @@ type SectionTitleProps = {
 
 // Shared section heading used across list screens.
 export function SectionTitle({ children, style }: SectionTitleProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return <Text style={[styles.title, style]}>{children}</Text>;
 }
 
-const styles = StyleSheet.create({
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-    marginBottom: 10,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    title: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: '800',
+      marginBottom: 10,
+    },
+  });
+}

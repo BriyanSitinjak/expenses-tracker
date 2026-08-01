@@ -7,11 +7,12 @@ import { TransactionRow } from '../components/TransactionRow';
 import {
   colorForCategory,
   colorForSubcategory,
-  colors,
+  ThemeColors,
   radius,
   spacing,
   surface,
 } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { Expense } from '../types';
@@ -27,6 +28,8 @@ const NONE = '__none__';
 
 // Lists expenses in a category, with optional sub-category filter chips.
 export function CategoryDetailScreen({ navigation, route }: CategoryDetailScreenProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { category, monthKey } = route.params;
   const { expenses, expensesForMonth, deleteExpense } = useBudgetStore();
   const [subFilter, setSubFilter] = useState(ALL);
@@ -172,60 +175,62 @@ export function CategoryDetailScreen({ navigation, route }: CategoryDetailScreen
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.bg,
-    flex: 1,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-    flexGrow: 1,
-  },
-  summary: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    ...surface('md'),
-  },
-  swatch: {
-    borderRadius: radius.md,
-    height: 48,
-    width: 48,
-  },
-  summaryBody: {
-    flex: 1,
-    gap: 2,
-  },
-  scope: {
-    color: colors.subText,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  total: {
-    color: colors.text,
-    fontSize: 24,
-    fontWeight: '900',
-  },
-  count: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  filterBlock: {
-    marginBottom: spacing.md,
-  },
-  filterLabel: {
-    color: colors.subText,
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingRight: spacing.md,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.bg,
+      flex: 1,
+    },
+    content: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xxl,
+      flexGrow: 1,
+    },
+    summary: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.md,
+      marginBottom: spacing.md,
+      padding: spacing.md,
+      ...surface('md', undefined, colors),
+    },
+    swatch: {
+      borderRadius: radius.md,
+      height: 48,
+      width: 48,
+    },
+    summaryBody: {
+      flex: 1,
+      gap: 2,
+    },
+    scope: {
+      color: colors.subText,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    total: {
+      color: colors.text,
+      fontSize: 24,
+      fontWeight: '900',
+    },
+    count: {
+      color: colors.muted,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    filterBlock: {
+      marginBottom: spacing.md,
+    },
+    filterLabel: {
+      color: colors.subText,
+      fontSize: 12,
+      fontWeight: '700',
+      marginBottom: spacing.sm,
+    },
+    filterRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      paddingRight: spacing.md,
+    },
+  });
+}

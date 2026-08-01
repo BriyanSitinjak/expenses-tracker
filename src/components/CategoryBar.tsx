@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colorForCategory, colors, spacing } from '../constants/theme';
+import { colorForCategory, ThemeColors, spacing } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { formatCurrency } from '../utils/format';
 import { Icon } from './Icon';
 import { ProgressBar } from './ProgressBar';
@@ -15,6 +16,8 @@ type CategoryBarProps = {
 
 // A single category row: color dot, name, amount (+ optional %) and a bar.
 export function CategoryBar({ name, amount, max, total, onPress }: CategoryBarProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const color = colorForCategory(name);
   const percent = total && total > 0 ? Math.round((amount / total) * 100) : null;
 
@@ -53,48 +56,50 @@ export function CategoryBar({ name, amount, max, total, onPress }: CategoryBarPr
   return <View style={styles.row}>{body}</View>;
 }
 
-const styles = StyleSheet.create({
-  row: {
-    marginBottom: spacing.md,
-  },
-  pressed: {
-    opacity: 0.72,
-  },
-  top: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-    gap: spacing.sm,
-  },
-  labelWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-    minWidth: 0,
-  },
-  amountWrap: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  name: {
-    color: colors.text,
-    fontWeight: '600',
-    flexShrink: 1,
-  },
-  amount: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  pct: {
-    color: colors.subText,
-    fontWeight: '600',
-    fontSize: 12,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    row: {
+      marginBottom: spacing.md,
+    },
+    pressed: {
+      opacity: 0.72,
+    },
+    top: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: spacing.xs,
+      gap: spacing.sm,
+    },
+    labelWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      flex: 1,
+      minWidth: 0,
+    },
+    amountWrap: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 4,
+    },
+    dot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    name: {
+      color: colors.text,
+      fontWeight: '600',
+      flexShrink: 1,
+    },
+    amount: {
+      color: colors.text,
+      fontWeight: '700',
+    },
+    pct: {
+      color: colors.subText,
+      fontWeight: '600',
+      fontSize: 12,
+    },
+  });
+}

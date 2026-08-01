@@ -1,6 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { colors, radius, shadow, spacing } from '../constants/theme';
+import { ThemeColors, radius, shadow, spacing } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { Icon, IconName } from './Icon';
 
 type ButtonVariant = 'primary' | 'secondary';
@@ -23,6 +24,8 @@ export function Button({
   icon,
   style,
 }: ButtonProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const scale = useRef(new Animated.Value(1)).current;
 
   const animateTo = (value: number) => {
@@ -62,42 +65,44 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    borderRadius: radius.lg,
-  },
-  button: {
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  content: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  primary: {
-    backgroundColor: colors.primary,
-    ...shadow('sm'),
-  },
-  secondary: {
-    backgroundColor: colors.cardAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  primaryText: {
-    color: colors.onAccent,
-  },
-  secondaryText: {
-    color: colors.text,
-  },
-  disabled: {
-    opacity: 0.45,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    wrapper: {
+      borderRadius: radius.lg,
+    },
+    button: {
+      borderRadius: radius.lg,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    content: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    primary: {
+      backgroundColor: colors.primary,
+      ...shadow('sm', colors),
+    },
+    secondary: {
+      backgroundColor: colors.cardAlt,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    primaryText: {
+      color: colors.onAccent,
+    },
+    secondaryText: {
+      color: colors.text,
+    },
+    disabled: {
+      opacity: 0.45,
+    },
+  });
+}

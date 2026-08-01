@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import { colors, radius } from '../constants/theme';
+import { radius } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 type ProgressBarProps = {
   progress: number; // 0..1
@@ -13,11 +14,14 @@ type ProgressBarProps = {
 // Animated horizontal progress bar with a smooth fill transition.
 export function ProgressBar({
   progress,
-  color = colors.primary,
-  trackColor = colors.track,
+  color,
+  trackColor,
   height = 12,
   duration = 900,
 }: ProgressBarProps) {
+  const { colors } = useAppTheme();
+  const fillColor = color ?? colors.primary;
+  const track = trackColor ?? colors.track;
   const animated = useRef(new Animated.Value(0)).current;
   const clamped = Math.max(0, Math.min(1, progress));
 
@@ -36,9 +40,9 @@ export function ProgressBar({
   });
 
   return (
-    <View style={[styles.track, { backgroundColor: trackColor, height, borderRadius: height }]}>
+    <View style={[styles.track, { backgroundColor: track, height, borderRadius: height }]}>
       <Animated.View
-        style={[styles.fill, { backgroundColor: color, width, borderRadius: height }]}
+        style={[styles.fill, { backgroundColor: fillColor, width, borderRadius: height }]}
       />
     </View>
   );

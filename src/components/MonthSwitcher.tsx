@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, withAlpha } from '../constants/theme';
+import { ThemeColors, radius, spacing, withAlpha } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { getMonthLabel, monthRelation } from '../utils/date';
 import { ChevronStepper } from './ChevronStepper';
 
@@ -22,6 +23,8 @@ export function MonthSwitcher({
   onGoToCurrent,
   disabled = false,
 }: MonthSwitcherProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const relation = monthRelation(monthKey);
   const periodMeta =
     relation === 'current' ? 'This month' : relation === 'future' ? 'Upcoming' : 'Past period';
@@ -56,37 +59,39 @@ export function MonthSwitcher({
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    marginBottom: spacing.md,
-  },
-  wrapDisabled: {
-    opacity: 0.55,
-  },
-  metaRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    marginTop: spacing.xs,
-  },
-  meta: {
-    color: colors.subText,
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  todayBtn: {
-    backgroundColor: withAlpha(colors.primary, 0.12),
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  todayPressed: {
-    opacity: 0.7,
-  },
-  todayText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    wrap: {
+      marginBottom: spacing.md,
+    },
+    wrapDisabled: {
+      opacity: 0.55,
+    },
+    metaRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.sm,
+      justifyContent: 'center',
+      marginTop: spacing.xs,
+    },
+    meta: {
+      color: colors.subText,
+      fontSize: 12,
+      textAlign: 'center',
+    },
+    todayBtn: {
+      backgroundColor: withAlpha(colors.primary, 0.12),
+      borderRadius: radius.pill,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+    },
+    todayPressed: {
+      opacity: 0.7,
+    },
+    todayText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+  });
+}

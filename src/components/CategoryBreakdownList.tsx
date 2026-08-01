@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../constants/theme';
+import { ThemeColors } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { CategoryBar } from './CategoryBar';
 
 type CategoryBreakdownListProps = {
@@ -20,6 +21,8 @@ export function CategoryBreakdownList({
   limit,
   onPressCategory,
 }: CategoryBreakdownListProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const visible = limit != null ? items.slice(0, limit) : items;
   const max = items[0]?.[1] ?? 0;
 
@@ -43,8 +46,10 @@ export function CategoryBreakdownList({
   );
 }
 
-const styles = StyleSheet.create({
-  empty: {
-    color: colors.subText,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    empty: {
+      color: colors.subText,
+    },
+  });
+}

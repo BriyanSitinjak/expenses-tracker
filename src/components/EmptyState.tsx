@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing } from '../constants/theme';
+import { ThemeColors, spacing } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { IconName } from './Icon';
 import { IconTile } from './IconTile';
 
@@ -12,6 +13,9 @@ type EmptyStateProps = {
 
 // Shared empty list / empty section placeholder.
 export function EmptyState({ icon, title, message }: EmptyStateProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.wrap}>
       <IconTile name={icon} color={colors.muted} size="lg" elevated={false} />
@@ -21,20 +25,22 @@ export function EmptyState({ icon, title, message }: EmptyStateProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xl,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  message: {
-    color: colors.subText,
-    paddingHorizontal: spacing.lg,
-    textAlign: 'center',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    wrap: {
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.xl,
+    },
+    title: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: '800',
+    },
+    message: {
+      color: colors.subText,
+      paddingHorizontal: spacing.lg,
+      textAlign: 'center',
+    },
+  });
+}

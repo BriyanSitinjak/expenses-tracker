@@ -17,11 +17,12 @@ import { FALLBACK_CATEGORY } from '../constants/categories';
 import {
   colorForCategory,
   colorForSubcategory,
-  colors,
+  ThemeColors,
   radius,
   spacing,
   withAlpha,
 } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 
@@ -29,6 +30,8 @@ type ManageCategoriesScreenProps = NativeStackScreenProps<RootStackParamList, 'M
 
 // Screen to add, rename, and delete categories and their sub-categories.
 export function ManageCategoriesScreen(_: ManageCategoriesScreenProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const {
     categories,
     subcategories,
@@ -240,128 +243,130 @@ export function ManageCategoriesScreen(_: ManageCategoriesScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.bg,
-    flex: 1,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  addWrap: {
-    marginTop: spacing.md,
-  },
-  card: {
-    marginBottom: spacing.md,
-    padding: spacing.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  name: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  renameInput: {
-    flex: 1,
-    backgroundColor: colors.bgElevated,
-    borderColor: colors.primary,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    color: colors.text,
-    fontSize: 16,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  count: {
-    color: colors.subText,
-    fontSize: 13,
-    fontWeight: '700',
-    minWidth: 20,
-    textAlign: 'right',
-  },
-  defaultTag: {
-    color: colors.muted,
-    fontSize: 12,
-    fontStyle: 'italic',
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  iconBtn: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-  },
-  save: {
-    color: colors.success,
-    fontWeight: '800',
-  },
-  cancel: {
-    color: colors.subText,
-    fontWeight: '700',
-  },
-  subWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  subChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.bgElevated,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.pill,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  subDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  subText: {
-    color: colors.subText,
-    fontWeight: '700',
-  },
-  subRemove: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.track,
-  },
-  subRemoveText: {
-    color: colors.text,
-    fontWeight: '800',
-    lineHeight: 16,
-  },
-  addSubChip: {
-    borderColor: colors.accent,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  addSubText: {
-    color: colors.accent,
-    fontWeight: '700',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.bg,
+      flex: 1,
+    },
+    content: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xxl,
+    },
+    addWrap: {
+      marginTop: spacing.md,
+    },
+    card: {
+      marginBottom: spacing.md,
+      padding: spacing.md,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    dot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+    },
+    name: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    renameInput: {
+      flex: 1,
+      backgroundColor: colors.bgElevated,
+      borderColor: colors.primary,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      color: colors.text,
+      fontSize: 16,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    count: {
+      color: colors.subText,
+      fontSize: 13,
+      fontWeight: '700',
+      minWidth: 20,
+      textAlign: 'right',
+    },
+    defaultTag: {
+      color: colors.muted,
+      fontSize: 12,
+      fontStyle: 'italic',
+    },
+    actions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    iconBtn: {
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 2,
+    },
+    save: {
+      color: colors.success,
+      fontWeight: '800',
+    },
+    cancel: {
+      color: colors.subText,
+      fontWeight: '700',
+    },
+    subWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
+    subChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      backgroundColor: colors.bgElevated,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: radius.pill,
+      paddingLeft: spacing.md,
+      paddingRight: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    subDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    subText: {
+      color: colors.subText,
+      fontWeight: '700',
+    },
+    subRemove: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.track,
+    },
+    subRemoveText: {
+      color: colors.text,
+      fontWeight: '800',
+      lineHeight: 16,
+    },
+    addSubChip: {
+      borderColor: colors.accent,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderRadius: radius.pill,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+    },
+    addSubText: {
+      color: colors.accent,
+      fontWeight: '700',
+    },
+  });
+}

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { colors, radius, spacing } from '../constants/theme';
+import { ThemeColors, radius, spacing } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { Icon } from './Icon';
 
 type ChevronStepperProps = {
@@ -19,6 +20,9 @@ export function ChevronStepper({
   disabled = false,
   style,
 }: ChevronStepperProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={[styles.row, style]}>
       <Pressable
@@ -56,36 +60,38 @@ export function ChevronStepper({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  arrow: {
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  arrowPressed: {
-    backgroundColor: colors.cardAlt,
-  },
-  arrowDisabled: {
-    opacity: 0.45,
-  },
-  center: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  label: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    row: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    arrow: {
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      height: 36,
+      justifyContent: 'center',
+      width: 36,
+    },
+    arrowPressed: {
+      backgroundColor: colors.cardAlt,
+    },
+    arrowDisabled: {
+      opacity: 0.45,
+    },
+    center: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    label: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '800',
+      textAlign: 'center',
+    },
+  });
+}

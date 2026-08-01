@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, surface } from '../constants/theme';
+import { ThemeColors, spacing, surface } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { ProgressBar } from './ProgressBar';
 
 type TransferStatusModalProps = {
@@ -19,6 +20,8 @@ export function TransferStatusModal({
   step = 1,
   totalSteps = 1,
 }: TransferStatusModalProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const safeTotal = Math.max(1, totalSteps);
   const safeStep = Math.max(1, Math.min(step, safeTotal));
   const progress = safeStep / safeTotal;
@@ -42,45 +45,47 @@ export function TransferStatusModal({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    alignItems: 'center',
-    backgroundColor: colors.overlay,
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  card: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    maxWidth: 320,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-    width: '100%',
-    ...surface('md'),
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-    marginTop: spacing.sm,
-    textAlign: 'center',
-  },
-  step: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-  },
-  barWrap: {
-    marginTop: spacing.xs,
-    width: '100%',
-  },
-  message: {
-    color: colors.subText,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: spacing.xs,
-    textAlign: 'center',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    backdrop: {
+      alignItems: 'center',
+      backgroundColor: colors.overlay,
+      flex: 1,
+      justifyContent: 'center',
+      padding: spacing.lg,
+    },
+    card: {
+      alignItems: 'center',
+      gap: spacing.sm,
+      maxWidth: 320,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.xl,
+      width: '100%',
+      ...surface('md', undefined, colors),
+    },
+    title: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: '800',
+      marginTop: spacing.sm,
+      textAlign: 'center',
+    },
+    step: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '800',
+      letterSpacing: 0.2,
+    },
+    barWrap: {
+      marginTop: spacing.xs,
+      width: '100%',
+    },
+    message: {
+      color: colors.subText,
+      fontSize: 14,
+      lineHeight: 20,
+      marginTop: spacing.xs,
+      textAlign: 'center',
+    },
+  });
+}

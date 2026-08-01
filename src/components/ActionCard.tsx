@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, spacing, surface } from '../constants/theme';
+import { ThemeColors, spacing, surface } from '../constants/theme';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { IconName } from './Icon';
 import { IconTile } from './IconTile';
 
@@ -22,6 +23,9 @@ export function ActionCard({
   onPress,
   disabled,
 }: ActionCardProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <Pressable
       onPress={onPress}
@@ -39,28 +43,30 @@ export function ActionCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    gap: spacing.sm,
-    padding: spacing.md,
-    ...surface('md'),
-  },
-  pressed: {
-    backgroundColor: colors.cardAlt,
-    transform: [{ scale: 0.98 }],
-  },
-  disabled: {
-    opacity: 0.55,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  subtitle: {
-    color: colors.subText,
-    fontSize: 11,
-    marginTop: -4,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    card: {
+      flex: 1,
+      gap: spacing.sm,
+      padding: spacing.md,
+      ...surface('md', undefined, colors),
+    },
+    pressed: {
+      backgroundColor: colors.cardAlt,
+      transform: [{ scale: 0.98 }],
+    },
+    disabled: {
+      opacity: 0.55,
+    },
+    title: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    subtitle: {
+      color: colors.subText,
+      fontSize: 11,
+      marginTop: -4,
+    },
+  });
+}

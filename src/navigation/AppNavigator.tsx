@@ -1,8 +1,9 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
-import { Pressable } from 'react-native';
+import React, { useMemo } from 'react';
+import { Pressable, View } from 'react-native';
 import { Icon } from '../components/Icon';
-import { colors } from '../constants/theme';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { AddExpenseScreen } from '../screens/AddExpenseScreen';
 import { BudgetSetupScreen } from '../screens/BudgetSetupScreen';
 import { CategoryDetailScreen } from '../screens/CategoryDetailScreen';
@@ -25,25 +26,33 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // Defines app navigation stack and screen options.
 export function AppNavigator() {
+  const { colors } = useAppTheme();
+
+  const screenOptions = useMemo(
+    () => ({
+      headerStyle: { backgroundColor: colors.bgElevated },
+      headerTintColor: colors.text,
+      headerTitleStyle: { fontWeight: '800' as const },
+      headerShadowVisible: false,
+      contentStyle: { backgroundColor: colors.bg },
+    }),
+    [colors]
+  );
+
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.bgElevated },
-        headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: '800' },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: colors.bg },
-      }}
-    >
+    <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen
         component={DashboardScreen}
         name="Dashboard"
         options={({ navigation }) => ({
           title: 'My Expenses',
           headerRight: () => (
-            <Pressable onPress={() => navigation.navigate('Manage')} hitSlop={12}>
-              <Icon name="settings-sharp" size={22} color={colors.text} />
-            </Pressable>
+            <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+              <ThemeToggle />
+              <Pressable onPress={() => navigation.navigate('Manage')} hitSlop={12}>
+                <Icon name="settings-sharp" size={22} color={colors.text} />
+              </Pressable>
+            </View>
           ),
         })}
       />
