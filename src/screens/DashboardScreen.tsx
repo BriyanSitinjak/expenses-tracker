@@ -140,6 +140,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
     <>
       <View style={styles.headerBlock}>
         <Text style={styles.headerTitle}>{formatTodayLabel()}</Text>
+        <Text style={styles.headerSubtitle}>Track your spending</Text>
       </View>
 
       <MonthSwitcher
@@ -351,6 +352,12 @@ function createStyles(colors: ThemeColors) {
       fontSize: 28,
       fontWeight: '900',
       letterSpacing: -0.4,
+    },
+    headerSubtitle: {
+      color: colors.subText,
+      fontSize: 15,
+      fontWeight: '500',
+      marginTop: 4,
     },
     toolRow: {
       flexDirection: 'row',
