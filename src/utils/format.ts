@@ -40,3 +40,33 @@ export function parseAmountInput(value: string): number {
   const digits = stripAmountInput(value);
   return digits ? Number(digits) : 0;
 }
+
+const MAX_AMOUNT_DIGITS = 12;
+
+// Appends digits (including "00" / "000") for numpad entry.
+export function appendAmountDigits(
+  value: string,
+  digitsToAdd: string,
+  maxDigits = MAX_AMOUNT_DIGITS
+): string {
+  if (!/^\d+$/.test(digitsToAdd)) return value;
+
+  const current = stripAmountInput(value);
+  let next: string;
+
+  if (!current || current === '0') {
+    const trimmed = digitsToAdd.replace(/^0+/, '');
+    next = trimmed || '0';
+  } else {
+    next = current + digitsToAdd;
+  }
+
+  return formatAmountInput(next.slice(0, maxDigits));
+}
+
+// Removes the last digit from a formatted amount input.
+export function deleteAmountDigit(value: string): string {
+  const digits = stripAmountInput(value);
+  if (digits.length <= 1) return '';
+  return formatAmountInput(digits.slice(0, -1));
+}

@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { AmountNumpad } from '../components/AmountNumpad';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Icon, IconName } from '../components/Icon';
@@ -31,7 +32,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
 import { PaymentMethod } from '../types';
 import { dateForMonth } from '../utils/date';
-import { formatAmountInput, formatCurrency, parseAmountInput, stripAmountInput } from '../utils/format';
+import { formatAmountInput, formatCurrency, parseAmountInput } from '../utils/format';
 
 type AddExpenseScreenProps = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
 
@@ -121,11 +122,6 @@ export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
     setSubcategory(created);
     setNewSub('');
     setAddingSub(false);
-  }
-
-  function handleAmountChange(text: string) {
-    const digits = stripAmountInput(text);
-    setAmount(digits ? formatAmountInput(digits) : '');
   }
 
   // Validates and saves (create or update), then returns to the previous screen.
@@ -244,13 +240,7 @@ export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
       {!isEdit ? <MonthPeriodBanner monthKey={selectedMonthKey} context="save" /> : null}
 
       <Card>
-        <TextInputField
-          keyboardType="numeric"
-          label="Amount (IDR)"
-          onChangeText={handleAmountChange}
-          placeholder="e.g. 25.000"
-          value={amount}
-        />
+        <AmountNumpad value={amount} onChange={setAmount} />
 
         {mode === 'expense' ? (
           <>
