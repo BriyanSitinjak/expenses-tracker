@@ -5,41 +5,69 @@ import { AnimatedCard } from '../components/AnimatedCard';
 import { CategoryBreakdownList } from '../components/CategoryBreakdownList';
 import { CategoryShareChart } from '../components/CategoryShareChart';
 import { IconTile } from '../components/IconTile';
+import { MonthSwitcher } from '../components/MonthSwitcher';
 import { ProgressBar } from '../components/ProgressBar';
 import { SectionTitle } from '../components/SectionTitle';
 import { ThemeColors, spacing } from '../constants/theme';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useBudgetStore } from '../store/budgetStore';
-import { onlyExpenses, sumAmount, sumByCategory, sumByMethod } from '../utils/analytics';
+import { sumAmount, sumByCategory, sumByMethod } from '../utils/analytics';
+import { getMonthLabel } from '../utils/date';
 import { formatCurrency } from '../utils/format';
 
 type StatsScreenProps = NativeStackScreenProps<RootStackParamList, 'Stats'>;
 
-// All-time stats: share overview, category bars, cash split, and payment mix.
+// Monthly stats: share overview, category bars, cash on hand, and payment mix.
 export function StatsScreen({ navigation }: StatsScreenProps) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { expenses, cashOnHand } = useBudgetStore();
 
-  const onlyExpenseRows = useMemo(() => onlyExpenses(expenses), [expenses]);
-  const byCategory = useMemo(() => sumByCategory(onlyExpenseRows), [onlyExpenseRows]);
-  const byMethod = useMemo(() => sumByMethod(expenses), [expenses]);
+  const {
+    cashOnHand,
+    selectedMonthKey,
+    shiftSelectedMonth,
+    goToCurrentMonth,
+    expensesForMonth,
+    transactionsForMonth,
+  } = useBudgetStore();
+
+  const monthTransactions = transactionsForMonth(selectedMonthKey);
+  const monthExpenses = useMemo(
+    () => expensesForMonth(selectedMonthKey),
+    [expensesForMonth, selectedMonthKey]
+  );
+
+  const byCategory = useMemo(() => sumByCategory(monthExpenses), [monthExpenses]);
+  const byMethod = useMemo(() => sumByMethod(monthTransactions), [monthTransactions]);
 
   const cash = cashOnHand();
   const methodTotal = byMethod.cash + byMethod.debit;
-  const total = sumAmount(onlyExpenseRows);
+  const total = sumAmount(monthExpenses);
+  const monthLabel = getMonthLabel(selectedMonthKey);
 
   function openCategory(category: string) {
-    navigation.navigate('CategoryDetail', { category });
+    navigation.navigate('CategoryDetail', {
+      category,
+      monthKey: selectedMonthKey,
+    });
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <MonthSwitcher
+        monthKey={selectedMonthKey}
+        transactionCount={monthTransactions.length}
+        onPrevious={() => shiftSelectedMonth(-1)}
+        onNext={() => shiftSelectedMonth(1)}
+        onGoToCurrent={goToCurrentMonth}
+      />
+
       <SectionTitle>Spending overview</SectionTitle>
       <AnimatedCard index={0} style={styles.block}>
         <Text style={styles.txnHint}>
-          {expenses.length} transaction{expenses.length === 1 ? '' : 's'} all-time
+          {monthTransactions.length} transaction
+          {monthTransactions.length === 1 ? '' : 's'} · {monthLabel}
         </Text>
         <CategoryShareChart items={byCategory} total={total} />
       </AnimatedCard>
@@ -49,7 +77,7 @@ export function StatsScreen({ navigation }: StatsScreenProps) {
         <CategoryBreakdownList
           items={byCategory}
           total={total}
-          emptyText="No spending data yet."
+          emptyText={`No spending in ${monthLabel}.`}
           onPressCategory={openCategory}
         />
       </AnimatedCard>
@@ -62,6 +90,7 @@ export function StatsScreen({ navigation }: StatsScreenProps) {
             <Text style={[styles.cashValue, cash < 0 && styles.cashDanger]}>
               {formatCurrency(cash)}
             </Text>
+            <Text style={styles.cashHint}>All-time wallet balance</Text>
           </View>
           <IconTile name="wallet" color={colors.success} size="lg" />
         </View>
@@ -86,7 +115,9 @@ export function StatsScreen({ navigation }: StatsScreenProps) {
         </Text>
       </AnimatedCard>
 
-      <Text style={styles.footnote}>All-time totals · export lives on the dashboard</Text>
+      <Text style={styles.footnote}>
+        {monthLabel} stats · cash on hand stays all-time
+      </Text>
     </ScrollView>
   );
 }
@@ -125,6 +156,11 @@ function createStyles(colors: ThemeColors) {
       color: colors.text,
       fontSize: 28,
       fontWeight: '900',
+      marginTop: 2,
+    },
+    cashHint: {
+      color: colors.muted,
+      fontSize: 12,
       marginTop: 2,
     },
     cashDanger: {

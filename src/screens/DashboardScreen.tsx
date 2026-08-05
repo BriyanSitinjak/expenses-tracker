@@ -185,7 +185,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         />
         <ActionCard
           title="Stats"
-          subtitle="All-time view"
+          subtitle={getMonthLabel(selectedMonthKey)}
           icon="stats-chart"
           iconColor={colors.success}
           onPress={() => navigation.navigate('Stats')}

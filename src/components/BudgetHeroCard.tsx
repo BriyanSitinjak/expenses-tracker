@@ -84,19 +84,21 @@ export function BudgetHeroCard({
       ]}
     >
       <View style={styles.topRow}>
-        <View>
+        <View style={styles.amountBlock}>
           <Text style={styles.kicker}>
             {overBudget ? `Over in ${periodLabel}` : `Left in ${periodLabel}`}
           </Text>
-          <Animated.View style={{ transform: [{ scale: amountPulse }] }}>
-            <AnimatedNumber
-              value={Math.abs(remaining)}
-              format={(v) => formatCurrency(v)}
-              adjustsFontSizeToFit
-              numberOfLines={1}
-              style={[styles.amount, { color: overBudget ? colors.danger : colors.text }]}
-            />
-          </Animated.View>
+          <View style={styles.amountSlot}>
+            <Animated.View style={[styles.amountPulse, { transform: [{ scale: amountPulse }] }]}>
+              <AnimatedNumber
+                value={Math.abs(remaining)}
+                format={(v) => formatCurrency(v)}
+                adjustsFontSizeToFit
+                numberOfLines={1}
+                style={[styles.amount, { color: overBudget ? colors.danger : colors.text }]}
+              />
+            </Animated.View>
+          </View>
         </View>
 
         <StatusPill label={status.label} color={status.color} />
@@ -131,7 +133,6 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     card: {
       marginBottom: spacing.md,
-      overflow: 'hidden',
       padding: spacing.lg,
       ...surface('md', { radius: 'xl' }, colors),
     },
@@ -141,17 +142,31 @@ function createStyles(colors: ThemeColors) {
       gap: spacing.md,
       justifyContent: 'space-between',
     },
+    amountBlock: {
+      flex: 1,
+      minWidth: 0,
+    },
     kicker: {
       color: colors.subText,
       fontSize: 13,
       fontWeight: '600',
       letterSpacing: 0.2,
     },
+    amountSlot: {
+      justifyContent: 'center',
+      marginTop: spacing.xs,
+      minHeight: 48,
+      overflow: 'visible',
+      paddingHorizontal: 2,
+      paddingVertical: 4,
+    },
+    amountPulse: {
+      alignSelf: 'flex-start',
+    },
     amount: {
       fontSize: 36,
       fontWeight: '900',
       letterSpacing: -0.5,
-      marginTop: spacing.xs,
       maxWidth: 220,
     },
     progressBlock: {
