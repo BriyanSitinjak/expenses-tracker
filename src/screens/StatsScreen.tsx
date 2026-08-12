@@ -2,6 +2,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AnimatedCard } from '../components/AnimatedCard';
+import { AiComingSoonBanner } from '../components/AiComingSoonBanner';
 import { CategoryBreakdownList } from '../components/CategoryBreakdownList';
 import { CategoryShareChart } from '../components/CategoryShareChart';
 import { IconTile } from '../components/IconTile';
@@ -118,6 +119,7 @@ export function StatsScreen({ navigation }: StatsScreenProps) {
       <Text style={styles.footnote}>
         {monthLabel} stats · cash on hand stays all-time
       </Text>
+      <AiComingSoonBanner compact />
     </ScrollView>
   );
 }

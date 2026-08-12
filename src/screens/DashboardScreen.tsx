@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionCard } from '../components/ActionCard';
+import { AiComingSoonBanner } from '../components/AiComingSoonBanner';
 import { AnimatedCard } from '../components/AnimatedCard';
 import { BudgetHeroCard } from '../components/BudgetHeroCard';
 import { CategoryBreakdownList } from '../components/CategoryBreakdownList';
@@ -165,6 +166,8 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
           if (!busy) navigation.navigate('BudgetSetup');
         }}
       />
+
+      <AiComingSoonBanner />
 
       <View style={styles.toolRow} pointerEvents={busy ? 'none' : 'auto'}>
         <ActionCard
