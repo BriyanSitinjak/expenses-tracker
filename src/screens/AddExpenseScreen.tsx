@@ -16,6 +16,7 @@ import { Card } from '../components/Card';
 import { Icon, IconName } from '../components/Icon';
 import { InlineAddRow } from '../components/InlineAddRow';
 import { MonthPeriodBanner } from '../components/MonthPeriodBanner';
+import { ReceiptAttachment } from '../components/ReceiptAttachment';
 import { AddChip, SelectChip } from '../components/SelectChip';
 import { TextInputField } from '../components/TextInputField';
 import { WITHDRAWAL_CATEGORY } from '../constants/categories';
@@ -67,6 +68,7 @@ export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
   const [method, setMethod] = useState<PaymentMethod>('debit');
   const [category, setCategory] = useState(categories[0] ?? 'Food');
   const [subcategory, setSubcategory] = useState<string | undefined>(undefined);
+  const [receiptUri, setReceiptUri] = useState<string | undefined>(undefined);
 
   const [addingCat, setAddingCat] = useState(false);
   const [newCategory, setNewCategory] = useState('');
@@ -92,6 +94,7 @@ export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
     setMethod(found.method);
     setCategory(found.category || (useBudgetStore.getState().categories[0] ?? 'Food'));
     setSubcategory(found.subcategory);
+    setReceiptUri(found.receiptUri);
   }, [expenseId, navigation]);
 
   const editing = expenseId ? expenses.find((item) => item.id === expenseId) : undefined;
@@ -144,6 +147,7 @@ export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
               amount: parsedAmount,
               merchant: merchant.trim() || 'Cash withdrawal',
               note: note.trim() || undefined,
+              receiptUri,
               type: 'withdrawal',
               method: 'cash',
               category: WITHDRAWAL_CATEGORY,
@@ -156,6 +160,7 @@ export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
               subcategory,
               merchant: merchant.trim() || undefined,
               note: note.trim() || undefined,
+              receiptUri,
               method,
               type: 'expense',
               date: editing.date,
@@ -171,6 +176,7 @@ export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
         category: WITHDRAWAL_CATEGORY,
         merchant: merchant.trim() || 'Cash withdrawal',
         note: note.trim() || undefined,
+        receiptUri,
         source: 'manual',
         method: 'cash',
         type: 'withdrawal',
@@ -183,6 +189,7 @@ export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
         subcategory,
         merchant: merchant.trim() || undefined,
         note: note.trim() || undefined,
+        receiptUri,
         source: 'manual',
         method,
         type: 'expense',
@@ -348,6 +355,8 @@ export function AddExpenseScreen({ navigation, route }: AddExpenseScreenProps) {
           placeholder={mode === 'withdrawal' ? 'e.g. for weekly spending' : 'e.g. lunch with team'}
           value={note}
         />
+
+        <ReceiptAttachment uri={receiptUri} onChange={setReceiptUri} />
 
         <Button
           icon={mode === 'withdrawal' ? 'arrow-up' : 'checkmark'}

@@ -11,10 +11,19 @@ import {
 import { useAppTheme } from '../hooks/useAppTheme';
 import { Expense, PaymentMethod } from '../types';
 import { formatCurrency } from '../utils/format';
+import { Icon } from './Icon';
 
 type TransactionRowData = Pick<
   Expense,
-  'category' | 'subcategory' | 'merchant' | 'note' | 'date' | 'amount' | 'type' | 'method'
+  | 'category'
+  | 'subcategory'
+  | 'merchant'
+  | 'note'
+  | 'date'
+  | 'amount'
+  | 'type'
+  | 'method'
+  | 'receiptUri'
 >;
 
 type TransactionRowProps = {
@@ -132,10 +141,13 @@ export function TransactionRow({ item, onPress, onLongPress, compact }: Transact
           </>
         )}
       </View>
-      <Text style={[styles.amount, payment.amount]}>
-        {isWithdrawal ? '→ ' : '-'}
-        {formatCurrency(item.amount)}
-      </Text>
+      <View style={styles.amountCol}>
+        {item.receiptUri ? <Icon name="camera" size={14} color={colors.muted} /> : null}
+        <Text style={[styles.amount, payment.amount]}>
+          {isWithdrawal ? '→ ' : '-'}
+          {formatCurrency(item.amount)}
+        </Text>
+      </View>
     </>
   );
 
@@ -283,6 +295,10 @@ function createStyles(colors: ThemeColors) {
     },
     amount: {
       fontWeight: '800',
+    },
+    amountCol: {
+      alignItems: 'flex-end',
+      gap: 4,
     },
     amountDebit: {
       color: colors.primary,

@@ -103,7 +103,7 @@ export const useBudgetStore = create<BudgetStore>()(
       },
 
       // Adds one transaction, registering its category/sub-category if new.
-      addExpense: ({ amount, category, subcategory, note, merchant, date, source, method, type }) => {
+      addExpense: ({ amount, category, subcategory, note, merchant, receiptUri, date, source, method, type }) => {
         const newExpense: Expense = {
           id: createExpenseId(),
           amount,
@@ -111,6 +111,7 @@ export const useBudgetStore = create<BudgetStore>()(
           subcategory,
           note,
           merchant,
+          receiptUri,
           source: source ?? 'manual',
           method: method ?? 'debit',
           type: type ?? 'expense',
@@ -329,7 +330,7 @@ export const useBudgetStore = create<BudgetStore>()(
     }),
     {
       name: 'expense-budget-store',
-      version: 7,
+      version: 8,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         monthlyBudget: state.monthlyBudget,
@@ -351,6 +352,7 @@ export const useBudgetStore = create<BudgetStore>()(
           subcategory: item.subcategory,
           note: item.note,
           merchant: item.merchant,
+          receiptUri: item.receiptUri,
           source: item.source ?? 'manual',
           method: item.method ?? 'debit',
           type: item.type ?? 'expense',

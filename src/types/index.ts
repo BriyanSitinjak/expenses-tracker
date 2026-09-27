@@ -18,6 +18,8 @@ export type Expense = {
   subcategory?: string;
   note?: string;
   merchant?: string;
+  /** Local URI of an attached receipt photo. */
+  receiptUri?: string;
   source: ExpenseSource;
   method: PaymentMethod;
   type: TxType;
@@ -31,6 +33,7 @@ export type DraftExpense = {
   subcategory?: string;
   merchant?: string;
   note?: string;
+  receiptUri?: string;
   source: ExpenseSource;
   method: PaymentMethod;
   type: TxType;
