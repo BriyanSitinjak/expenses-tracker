@@ -17,7 +17,7 @@ export function Card({ children, style }: CardProps) {
 
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
-    card: {
+    card: {   
       padding: spacing.lg,
       ...surface('md', { radius: 'xl' }, colors),
     },
