@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F9F6F2"
     },
     "ios": {
       "supportsTablet": true,
@@ -22,7 +22,12 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#F9F6F2"
+      },
+      "splash": {
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#F9F6F2"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -40,6 +45,14 @@
         {
           "photosPermission": "Allow access to your photos to attach receipts.",
           "cameraPermission": "Allow camera access to photograph receipts."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F9F6F2",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
         }
       ]
     ]
